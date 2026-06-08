@@ -48,3 +48,18 @@ public final class ProfileStore {
         return loadProfiles().first { $0.id == id }
     }
 }
+
+extension ProfileStore {
+    /// On first launch (no profiles persisted), seed built-ins and activate Aggressive.
+    /// No-op if profiles already exist.
+    public func bootstrapIfNeeded(fanCount: Int, defaultMaxRPM: Int) {
+        let existing = loadProfiles()
+        guard existing.isEmpty else { return }
+        let builtIns = FanProfile.builtIns(fanCount: fanCount,
+                                           defaultMaxRPM: defaultMaxRPM)
+        saveProfiles(builtIns)
+        if let aggressive = builtIns.first(where: { $0.name == "Aggressive" }) {
+            activeProfileID = aggressive.id
+        }
+    }
+}

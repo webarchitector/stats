@@ -488,4 +488,33 @@ final class SensorsTests: XCTestCase {
         XCTAssertNil(store.activeProfile())
         clearProfileStore()
     }
+
+    // MARK: - Bootstrap
+
+    func testBootstrap_emptyStore_writesBuiltInsAndPicksAggressive() {
+        clearProfileStore()
+        let store = ProfileStore()
+        store.bootstrapIfNeeded(fanCount: 1, defaultMaxRPM: 7000)
+        let loaded = store.loadProfiles()
+        XCTAssertEqual(loaded.count, 4)
+        XCTAssertEqual(loaded.map(\.name), ["Apple Auto", "Quiet", "Balanced", "Aggressive"])
+        let active = store.activeProfile()
+        XCTAssertEqual(active?.name, "Aggressive")
+        clearProfileStore()
+    }
+
+    func testBootstrap_existingStore_leavesItAlone() {
+        clearProfileStore()
+        let store = ProfileStore()
+        let custom = FanProfile(name: "Custom", drivers: [DriverSensor(key: "TC0D")],
+                                points: [CurvePoint(tempC: 50, rpm: 2000)])
+        store.saveProfiles([custom])
+        store.activeProfileID = custom.id
+        store.bootstrapIfNeeded(fanCount: 1, defaultMaxRPM: 7000)
+        let loaded = store.loadProfiles()
+        XCTAssertEqual(loaded.count, 1, "should not have replaced existing profiles")
+        XCTAssertEqual(loaded.first?.name, "Custom")
+        XCTAssertEqual(store.activeProfile()?.name, "Custom")
+        clearProfileStore()
+    }
 }

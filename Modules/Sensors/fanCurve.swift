@@ -46,6 +46,10 @@ extension FanCurve {
 }
 
 extension FanProfile {
+    /// Stable UUID for the Apple Auto built-in. Code can look up "the firmware
+    /// fallback profile" without depending on the (localizable) name.
+    public static let appleAutoID = UUID(uuidString: "00000000-0000-0000-0000-000000000A07")!
+
     /// Generates the canonical 4 built-in profiles for the user's hardware.
     /// `fanCount` is informational (offset applies regardless when fanCount ≥ 2;
     /// stored points are identical for 1- and 2-fan profiles).
@@ -71,7 +75,7 @@ extension FanProfile {
                                               (65, 4200), (72, 5400), (78, defaultMaxRPM)]
 
         return [
-            FanProfile(name: "Apple Auto", isBuiltIn: true,
+            FanProfile(id: appleAutoID, name: "Apple Auto", isBuiltIn: true,
                        drivers: drivers, points: [],
                        fanOffsetRPM: 50),
             FanProfile(name: "Quiet", isBuiltIn: true,

@@ -14,7 +14,6 @@ public final class ProfileStore {
 
     private let profilesKey = "fanctl_profiles"
     private let activeKey   = "fanctl_activeProfile"
-    private let enabledKey  = "fanctl_enabled"
 
     public init() {}
 

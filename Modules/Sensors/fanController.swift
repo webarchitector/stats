@@ -44,6 +44,12 @@ public final class FanCurveController {
     private var didBootstrap: Bool = false
     private var observers: [(NotificationCenter, NSObjectProtocol)] = []
 
+    /// All mutable state above is guarded by this lock. tick() runs on the
+    /// SensorsReader's background queue; sleep/wake/profile-change observers
+    /// run on .main. Swift Dictionary is not thread-safe — concurrent read/write
+    /// can crash or corrupt without this lock.
+    private let stateLock = NSLock()
+
     public init(helper: FanCurveHelper, store: ProfileStore) {
         self.helper = helper
         self.store = store
@@ -61,15 +67,11 @@ public final class FanCurveController {
         let defaultNC = NotificationCenter.default
         observers.append((defaultNC, defaultNC.addObserver(
             forName: .fanProfileChanged, object: nil, queue: .main) { [weak self] _ in
-            self?.lastApplied.removeAll()
-            self?.lastTempForHyst.removeAll()
-        }))
-        observers.append((defaultNC, defaultNC.addObserver(
-            forName: .fanControlEnabledChanged, object: nil, queue: .main) { [weak self] _ in
-            guard let self else { return }
-            if !self.store.enabled {
-                self.relinquish()
-            }
+            guard let self = self else { return }
+            self.stateLock.lock()
+            self.lastApplied.removeAll()
+            self.lastTempForHyst.removeAll()
+            self.stateLock.unlock()
         }))
     }
 
@@ -78,12 +80,16 @@ public final class FanCurveController {
     }
 
     private func handleWillSleep() {
+        stateLock.lock()
         isAsleep = true
-        relinquish()
+        relinquishLocked()
+        stateLock.unlock()
     }
 
     private func handleDidWake() {
+        stateLock.lock()
         isAsleep = false
+        stateLock.unlock()
     }
 
     #if DEBUG
@@ -92,6 +98,9 @@ public final class FanCurveController {
     #endif
 
     public func tick(snapshot: Sensors_List?) {
+        stateLock.lock()
+        defer { stateLock.unlock() }
+
         guard !isAsleep,
               helper.isActive(),
               let snapshot = snapshot else { return }
@@ -105,12 +114,18 @@ public final class FanCurveController {
 
         guard let profile = store.activeProfile(),
               !profile.points.isEmpty else {
-            relinquish()
+            relinquishLocked()
             return
         }
 
         guard let effTemp = FanCurve.effectiveTemperature(
-            sensors: snapshot.sensors, drivers: profile.drivers) else { return }
+            sensors: snapshot.sensors, drivers: profile.drivers) else {
+            // Drivers no longer match any sensor — release management so the
+            // fan returns to firmware automatic instead of being stuck at the
+            // last applied RPM.
+            relinquishLocked()
+            return
+        }
 
         for fan in fans {
             let base = FanCurve.interpolate(points: profile.points, tempC: effTemp)
@@ -124,8 +139,19 @@ public final class FanCurveController {
 
     private func applyIfNeeded(fan: Fan, target: Int, temp: Double,
                                hysteresisC: Double, deltaThreshold: Int) {
+        // User has taken manual control (Manual/Off/Max from popup) — yield.
+        if fan.customMode == .forced {
+            managedFans.remove(fan.id)
+            lastApplied.removeValue(forKey: fan.id)
+            lastTempForHyst.removeValue(forKey: fan.id)
+            return
+        }
         if !managedFans.contains(fan.id) {
             helper.setFanMode(id: fan.id, mode: FanMode.forced.rawValue)
+            // Record Stats-controlled state so popup and willTerminate know not
+            // to override us, and so relinquish on next launch can clean up
+            // crashed sessions.
+            Store.shared.set(key: "fan_\(fan.id)_mode", value: FanMode.curve.rawValue)
             managedFans.insert(fan.id)
         }
         let last = lastApplied[fan.id]
@@ -147,12 +173,19 @@ public final class FanCurveController {
     }
 
     public func shutdown() {
-        relinquish()
+        stateLock.lock()
+        relinquishLocked()
+        stateLock.unlock()
     }
 
-    private func relinquish() {
+    /// Caller MUST hold `stateLock`.
+    private func relinquishLocked() {
         for id in managedFans {
+            // Don't fight a user who picked Manual/Off/Max — they own this fan.
+            let raw = Store.shared.int(key: "fan_\(id)_mode", defaultValue: -1)
+            if raw == FanMode.forced.rawValue { continue }
             helper.setFanMode(id: id, mode: FanMode.automatic.rawValue)
+            Store.shared.set(key: "fan_\(id)_mode", value: FanMode.automatic.rawValue)
         }
         managedFans.removeAll()
         lastApplied.removeAll()

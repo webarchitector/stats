@@ -21,12 +21,7 @@ internal class Popup: PopupWrapper {
     private var sensors: [Sensor_p] = []
     private let settingsView: NSStackView = NSStackView()
     private let sensorsCache = PopupCache<[Sensor_p]>()
-    
-    private var fanControlState: Bool {
-        get { Store.shared.bool(key: "Sensors_fanControl", defaultValue: true) }
-        set { Store.shared.set(key: "Sensors_fanControl", value: newValue) }
-    }
-    
+
     public init() {
         super.init(ModuleType.sensors, frame: NSRect( x: 0, y: 0, width: Constants.Popup.width, height: 0))
         
@@ -53,24 +48,13 @@ internal class Popup: PopupWrapper {
                 selected: self.fanValueState.rawValue
             ))
         ]))
-        #if arch(arm64)
-        NotificationCenter.default.addObserver(self, selector: #selector(self.checkFanModesAndResetFtst), name: .checkFanModes, object: nil)
-        #endif
     }
-    
+
     deinit {
         NotificationCenter.default.removeObserver(self)
     }
-    
-    #if arch(arm64)
-    @objc private func checkFanModesAndResetFtst() {
-        let fanViews = self.list.values.compactMap { $0 as? FanView }
-        guard !fanViews.isEmpty else { return }
-        guard fanViews.allSatisfy({ $0.fan.mode.isAutomatic }) else { return }
-        SMCHelper.shared.resetFanControl()
-    }
-    #endif
-    
+
+
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
@@ -249,10 +233,6 @@ internal class Popup: PopupWrapper {
         self.setup(reload: true)
     }
     
-    @objc private func toggleFanControl() {
-        self.fanControlState = !self.fanControlState
-        NotificationCenter.default.post(name: .toggleFanControl, object: nil, userInfo: ["state": self.fanControlState])
-    }
 }
 
 // MARK: - Sensor view
@@ -471,7 +451,6 @@ internal class FanView: NSStackView {
         }
     }
     private var resetModeAfterSleep: Bool = false
-    private var controlState: Bool
     private var fanValue: FanValue {
         FanValue(rawValue: Store.shared.string(key: "Sensors_popup_fanValue", defaultValue: FanValue.percentage.rawValue)) ?? .percentage
     }
@@ -486,8 +465,7 @@ internal class FanView: NSStackView {
     public init(_ fan: Fan, width: CGFloat, callback: @escaping (() -> Void)) {
         self.fan = fan
         self.sizeCallback = callback
-        self.controlState = Store.shared.bool(key: "Sensors_fanControl", defaultValue: true)
-        
+
         let inset: CGFloat = 5
         super.init(frame: NSRect(x: 0, y: 0, width: width - (inset*2), height: 0))
         
@@ -510,9 +488,7 @@ internal class FanView: NSStackView {
         NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(self.sleepListener), name: NSWorkspace.willSleepNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(self.syncFanSpeed), name: .syncFansControl, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(self.changeHelperState), name: .fanHelperState, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(self.controlCallback), name: .toggleFanControl, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(self.reloadCurveProfilePopupNotification), name: .fanProfileChanged, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(self.fanControlEnabledChangedNotification), name: .fanControlEnabledChanged, object: nil)
         
         if let fanMode = self.fan.customMode, self.speedState && fanMode != .automatic && !fanMode.isStatsControlled {
             SMCHelper.shared.setFanMode(fan.id, mode: fanMode.rawValue)
@@ -534,7 +510,7 @@ internal class FanView: NSStackView {
         NSWorkspace.shared.notificationCenter.removeObserver(self)
         NotificationCenter.default.removeObserver(self, name: .syncFansControl, object: nil)
         NotificationCenter.default.removeObserver(self, name: .fanHelperState, object: nil)
-        NotificationCenter.default.removeObserver(self, name: .toggleFanControl, object: nil)
+        NotificationCenter.default.removeObserver(self, name: .fanProfileChanged, object: nil)
     }
     
     override func updateLayer() {
@@ -605,14 +581,6 @@ internal class FanView: NSStackView {
         self.modeButtons?.reloadProfilePopup()
     }
 
-    @objc private func fanControlEnabledChangedNotification() {
-        // Curve toggle on/off — rebuild mode buttons so the profile-picker slot
-        // appears/disappears in place of "Automatic".
-        if let old = self.buttonsView { old.removeFromSuperview() }
-        self.buttonsView = self.mode()
-        self.setupControls()
-    }
-
     private func mode() -> NSView {
         let view: NSView = NSView(frame: NSRect(x: 0, y: 0, width: self.frame.width, height: 30))
         view.heightAnchor.constraint(equalToConstant: view.bounds.height).isActive = true
@@ -637,6 +605,7 @@ internal class FanView: NSStackView {
                     self?.fan.mode = .forced
                     SMCHelper.shared.setFanMode(fan.id, mode: FanMode.forced.rawValue)
                 }
+                self?.fan.customMode = .forced  // signal controller to yield
                 SMCHelper.shared.setFanSpeed(fan.id, speed: 0)
                 self?.fan.customSpeed = 0
             }
@@ -648,6 +617,7 @@ internal class FanView: NSStackView {
                     self?.fan.mode = .forced
                     SMCHelper.shared.setFanMode(fan.id, mode: FanMode.forced.rawValue)
                 }
+                self?.fan.customMode = .forced  // signal controller to yield
                 SMCHelper.shared.setFanSpeed(fan.id, speed: Int(fan.maxSpeed))
                 self?.fan.customSpeed = Int(fan.maxSpeed)
             }
@@ -947,11 +917,6 @@ internal class FanView: NSStackView {
         self.setupControls(state)
     }
     
-    @objc private func controlCallback(_ notification: Notification) {
-        guard let state = notification.userInfo?["state"] as? Bool else { return }
-        self.controlState = state
-        self.setupControls()
-    }
 }
 
 /// Single popup picker for fan mode. Items are all profiles + "Manual" / "Off" / "Max".
@@ -1088,10 +1053,11 @@ private class ModeButtons: NSStackView {
 
     /// Switch active profile to "Apple Auto" (empty points) silently — controller
     /// relinquishes on its next tick so direct SMC writes from Manual/Off/Max stick.
+    /// Looks up by stable UUID (not name) to survive localization or renames.
     private func silentlyActivateAppleAuto() {
         let profiles = ProfileStore.shared.loadProfiles()
-        if let auto = profiles.first(where: { $0.name == "Apple Auto" }) {
-            ProfileStore.shared.activeProfileID = auto.id
+        if profiles.contains(where: { $0.id == FanProfile.appleAutoID }) {
+            ProfileStore.shared.activeProfileID = FanProfile.appleAutoID
         }
     }
 }

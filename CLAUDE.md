@@ -5,18 +5,18 @@
 Personal fork of `exelban/stats` extended with **Fan Curve Control** (see `docs/superpowers/specs/2026-06-08-stats-fan-curve-design.md`). Before non-trivial changes to fan-related code, re-read that spec.
 
 Key modified files relative to upstream:
-- `SMC/smc.swift` — added `FanMode.curve = 100` case and `isStatsControlled` computed property
-- `Modules/Sensors/values.swift` — added `CurvePoint`, `DriverSensor`, `FanProfile` value types
-- `Modules/Sensors/fanCurve.swift` — `FanCurve.interpolate`, `FanCurve.effectiveTemperature`, `FanProfile.builtIns` (NEW)
-- `Modules/Sensors/profileStore.swift` — persistence layer for profiles (NEW)
-- `Modules/Sensors/fanController.swift` — `FanCurveController` + `FanCurveHelper` protocol + `SMCHelperAdapter` (NEW)
-- `Modules/Sensors/curveGraph.swift` — mini graph view (NEW)
-- `Modules/Sensors/settings.swift` — Fan Curves section (master toggle, profile picker, curve editor, driver checklist, graph, offset, advanced)
-- `Modules/Sensors/main.swift` — wires controller into module lifecycle (init bootstrap, reader callback, willTerminate)
-- `Modules/Sensors/popup.swift` — predicates excluded `.curve` from raw SMC forwarding
-- `SMC/main.swift` — CLI rejects writing `mode=100` (Stats-internal sentinel) to SMC
-- `Kit/types.swift` — added `.fanProfileChanged` and `.fanControlEnabledChanged` notification names
-- `Tests/Sensors.swift` — 79-test suite covering all of the above (NEW)
+- `SMC/smc.swift` — `FanMode.curve = 100` case + `isStatsControlled` (Stats-internal marker, never written to SMC)
+- `Modules/Sensors/values.swift` — `CurvePoint`, `DriverSensor`, `FanProfile` value types
+- `Modules/Sensors/fanCurve.swift` — `FanCurve.interpolate`, `FanCurve.effectiveTemperature`, `FanProfile.builtIns`, `FanProfile.appleAutoID` (stable UUID) (NEW)
+- `Modules/Sensors/profileStore.swift` — persistence (`fanctl_profiles`, `fanctl_activeProfile` in Store). `enabled` is hard-coded true (no user toggle) (NEW)
+- `Modules/Sensors/fanController.swift` — `FanCurveController` (NSLock-guarded state, runs from background `SensorsReader` thread), `FanCurveHelper` protocol, `SMCHelperAdapter` (NEW)
+- `Modules/Sensors/curveGraph.swift` — mini graph NSView (NEW)
+- `Modules/Sensors/settings.swift` — Fan Curves editor (drivers, points, graph, offset, advanced + Duplicate/Delete). **Active profile picker lives in popup, not Settings.**
+- `Modules/Sensors/main.swift` — wires controller into module lifecycle (init bootstrap, reader callback, willTerminate, crash recovery)
+- `Modules/Sensors/popup.swift` — single `ModeButtons` NSPopUpButton with profiles + Manual/Off/Max; predicates exclude `.curve` from raw SMC forwarding
+- `SMC/main.swift` — CLI rejects writing `mode=100` to SMC
+- `Kit/types.swift` — `.fanProfileChanged` notification name
+- `Tests/Sensors.swift` — 78-test suite covering all of the above (NEW)
 - `Makefile` — `make local` target (NEW)
 
 ## Codebase Index
@@ -79,18 +79,24 @@ When creating a NEW Swift file in this fork, use a minimal header like `//  Crea
 
 - All new fan-curve code lives in `Modules/Sensors/` next to existing fan-related logic.
 - New `Notification.Name` entries go in `Kit/types.swift` next to existing ones.
-- New `Store.shared` keys use the `fanctl_` prefix to be greppable (`fanctl_enabled`, `fanctl_profiles`, `fanctl_activeProfile`).
+- New `Store.shared` keys use the `fanctl_` prefix to be greppable (`fanctl_profiles`, `fanctl_activeProfile`).
 - All XPC calls go through `SMCHelper.shared` (or the `FanCurveHelper` protocol's `SMCHelperAdapter` shim). Don't construct `NSXPCConnection` directly.
 - Tests in `Tests/Sensors.swift` (class `SensorsTests: XCTestCase`). Use `@testable import Sensors` + `import Kit`. Note: `private typealias FanMode = Kit.FanMode` is required because `Sensors` class shadows the module name.
 
 ## Intentional Decisions — Do NOT "Fix" These
 
-- `FanMode.curve = 100` is **not** a real SMC mode. SMC only understands 0/1/3. When `customMode == .curve`, the controller sets the actual SMC mode to `.forced` and writes RPM periodically; the `.curve` value is a Stats-level marker stored in `Store.shared`. `Modules/Sensors/popup.swift` and `SMC/main.swift` have guards to prevent the sentinel from ever reaching hardware.
-- `FanCurveHelper` protocol exists for testability. The real implementation `SMCHelperAdapter` is a thin shim over `SMCHelper.shared`; don't combine them.
-- Profile model uses a **master curve + per-fan offset**, not N independent curves per fan. This was a deliberate UX simplification.
-- Built-in profiles are protected from deletion. Editing a built-in auto-creates a `(custom)` copy via `persistCurveEdits` / `persistDriverEdits` / `editActiveProfile`.
-- `FanCurve.effectiveTemperature` uses raw `Sensor.value` (always Celsius), NOT `Sensor.localValue` (locale-converted). This was a real bug caught in spec review of Phase 2.
-- `Modules/Sensors/popup.swift` predicates use `!mode.isAutomatic && !mode.isStatsControlled` so `.curve` never gets forwarded to SMC. The historical `!mode.isAutomatic`-only check would silently corrupt fan state if Stats's `.curve` mode leaks into the popup's "user manually set forced" code path.
-- `Tests/Sensors.swift` uses `Store.shared.remove(_:)` to clean up between tests (NOT `UserDefaults.standard.removeObject`) because Store has an in-memory cache layer above UserDefaults.
-- `FanCurveController` bootstraps profiles on FIRST tick of the reader callback, not at init — because the controller doesn't know fan count or maxSpeed at init time. The reader's first tick provides this from the `Sensors_List` snapshot.
-- Crash recovery: `Sensors.init` calls `resetStaleCurveModes(...)` which iterates fan ids 0..3 and resets any fan whose stored `customMode == .curve` to `.automatic` IF Stats isn't currently configured to manage it (e.g. user disabled curves before a crash). Prevents fans stuck on a stale forced RPM.
+- **`FanMode.curve = 100` is a Stats-level sentinel**, never written to SMC. The controller sets actual SMC mode to `.forced` and writes RPM periodically; `customMode = .curve` is stored to signal "Stats is managing this fan". `popup.swift` and `SMC/main.swift` have guards preventing the sentinel from reaching hardware.
+- **`FanCurveHelper` protocol exists for testability.** Real implementation `SMCHelperAdapter` is a thin shim over `SMCHelper.shared`; don't combine them. `SMCHelperAdapter.isActive()` checks helper FILE presence on disk, NOT the XPC connection state. Doing `SMCHelper.shared.isActive()` here causes a chicken-and-egg deadlock — XPC connection is lazy, only forms on first write call.
+- **Profile model: master curve + per-fan offset**, not N independent curves per fan. Deliberate UX simplification.
+- **Built-in profiles protected from deletion.** Editing a built-in auto-creates a `(custom)` copy via `persistCurveEdits` / `persistDriverEdits` / `editActiveProfile`.
+- **Apple Auto profile has stable UUID** `00000000-0000-0000-0000-000000000A07` (`FanProfile.appleAutoID`). Lookup by UUID, not name — survives localization and user renames.
+- **`FanCurve.effectiveTemperature` uses raw `Sensor.value`** (always Celsius), NOT `Sensor.localValue` (locale-converted). Real bug caught in spec review of Phase 2.
+- **`popup.swift` predicates** use `!mode.isAutomatic && !mode.isStatsControlled` so `.curve` never gets forwarded to SMC.
+- **`Tests/Sensors.swift` uses `Store.shared.remove(_:)`** to clean up between tests (NOT `UserDefaults.standard.removeObject`) because Store has an in-memory cache layer above UserDefaults.
+- **`FanCurveController` bootstraps profiles on FIRST tick** of the reader callback, not at init — because the controller doesn't know fan count or maxSpeed at init time. Reader's first tick provides this from the `Sensors_List` snapshot.
+- **`FanCurveController` is thread-locked** with `NSLock`. `SensorsReader.read()` runs on a background queue → `tick()` runs there; NSWorkspace sleep/wake observers + `.fanProfileChanged` observer run on `.main`. All mutate the same dictionaries → without the lock, concurrent read/write would crash. `tick()` holds the lock for its whole body; `shutdown()` and observers take it via `relinquishLocked()`.
+- **User takeover is signaled by `Fan.customMode == .forced`**. When user picks Manual/Off/Max in popup, the callback sets `customMode = .forced`. Controller's `applyIfNeeded` and `relinquishLocked` both check this and skip the fan — never writing SMC for user-owned fans. Picking a profile back clears `customMode` (via callback(.automatic)) so controller can re-take.
+- **Crash recovery**: `Sensors.init` calls `resetStaleCurveModes(...)` iterating fan ids 0..3, resetting any fan whose stored `customMode == .curve` to `.automatic` if no active profile exists. Prevents fans stuck in forced mode after a stats crash.
+- **SMJobBless requirements are relaxed** (`Stats/Supporting Files/Info.plist` + `SMC/Helper/Info.plist`) to `identifier "..."` only (no `anchor apple generic` + team cert). Required for ad-hoc-signed builds to install the helper. Do NOT re-add Apple cert requirements unless you have a Developer ID signing identity.
+- **Active profile picker lives in popup, NOT Settings.** Settings exposes only per-profile editing (drivers/points/graph/offset/advanced) + Duplicate/Delete. The picker is implemented as a single `NSPopUpButton` in `ModeButtons` with profiles + separator + Manual/Off/Max items. Selecting Manual/Off/Max calls `silentlyActivateAppleAuto()` (FanProfile.appleAutoID) so the controller relinquishes on next tick and doesn't overwrite the user's manual write.
+- **Fan curves are ALWAYS enabled** — no master toggle. `ProfileStore.enabled` returns hardcoded `true` (kept for test compatibility). "Disable" semantic = select Apple Auto profile.

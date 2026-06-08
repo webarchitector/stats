@@ -517,4 +517,25 @@ final class SensorsTests: XCTestCase {
         XCTAssertEqual(store.activeProfile()?.name, "Custom")
         clearProfileStore()
     }
+
+    // MARK: - FakeFanCurveHelper baseline
+
+    func testFakeHelper_recordsSetFanModeCalls() {
+        let fake = FakeFanCurveHelper()
+        fake.setFanMode(id: 0, mode: FanMode.forced.rawValue)
+        XCTAssertEqual(fake.modeCalls, [.init(id: 0, mode: 1)])
+    }
+
+    func testFakeHelper_recordsSetFanSpeedCalls() {
+        let fake = FakeFanCurveHelper()
+        fake.setFanSpeed(id: 0, value: 4000)
+        XCTAssertEqual(fake.speedCalls, [.init(id: 0, rpm: 4000)])
+    }
+
+    func testFakeHelper_isActiveControllable() {
+        let fake = FakeFanCurveHelper()
+        XCTAssertTrue(fake.isActive())
+        fake.isActiveValue = false
+        XCTAssertFalse(fake.isActive())
+    }
 }

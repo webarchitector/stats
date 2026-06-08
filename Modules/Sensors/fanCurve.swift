@@ -29,14 +29,17 @@ public enum FanCurve {
 }
 
 extension FanCurve {
-    /// Returns the maximum localValue among sensors whose key matches any driver.
+    /// Returns the maximum raw Celsius value among sensors whose key matches any driver.
+    /// Uses `.value` (raw SMC reading, always Celsius) — not `.localValue`, which
+    /// routes through the user's display unit (Celsius/Fahrenheit) and would break
+    /// the controller's comparison against Celsius curve breakpoints.
     /// Returns nil if no driver matches any sensor.
     public static func effectiveTemperature(sensors: [Sensor_p],
                                             drivers: [DriverSensor]) -> Double? {
         let keys = Set(drivers.map(\.key))
         let values = sensors
             .filter { keys.contains($0.key) }
-            .map(\.localValue)
+            .map(\.value)
         return values.max()
     }
 }

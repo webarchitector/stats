@@ -292,13 +292,9 @@ final class SensorsTests: XCTestCase {
 
     // MARK: - effectiveTemperature
 
-    // Sensor.localValue for .temperature reformats `value` through the
-    // user's temperature unit (Celsius/Fahrenheit) and rounds to whole
-    // degrees. Force Celsius and use integer values so localValue is
-    // deterministic across machines.
-    private func forceCelsius() {
-        Store.shared.set(key: "temperature_units", value: "celsius")
-    }
+    // `effectiveTemperature` reads `Sensor.value` directly — the raw SMC
+    // reading, always in Celsius — so tests don't need to touch the
+    // user's display-unit preference.
 
     private func makeTempSensor(key: String, value: Double) -> Sensor {
         Sensor(key: key, name: key, value: value,
@@ -306,13 +302,11 @@ final class SensorsTests: XCTestCase {
     }
 
     func testEffectiveTemperature_emptyDrivers_returnsNil() {
-        forceCelsius()
         let r = FanCurve.effectiveTemperature(sensors: [], drivers: [])
         XCTAssertNil(r)
     }
 
     func testEffectiveTemperature_noMatchingSensors_returnsNil() {
-        forceCelsius()
         let sensors: [Sensor_p] = [makeTempSensor(key: "TC0D", value: 60)]
         let r = FanCurve.effectiveTemperature(sensors: sensors,
                 drivers: [DriverSensor(key: "MISSING")])
@@ -320,15 +314,13 @@ final class SensorsTests: XCTestCase {
     }
 
     func testEffectiveTemperature_singleDriver_returnsItsValue() {
-        forceCelsius()
-        let sensors: [Sensor_p] = [makeTempSensor(key: "TC0D", value: 65)]
+        let sensors: [Sensor_p] = [makeTempSensor(key: "TC0D", value: 65.5)]
         let r = FanCurve.effectiveTemperature(sensors: sensors,
                 drivers: [DriverSensor(key: "TC0D")])
-        XCTAssertEqual(r, 65)
+        XCTAssertEqual(r, 65.5)
     }
 
     func testEffectiveTemperature_multipleDrivers_returnsMax() {
-        forceCelsius()
         let sensors: [Sensor_p] = [
             makeTempSensor(key: "TC0D", value: 60),
             makeTempSensor(key: "TG0D", value: 75),
@@ -342,7 +334,6 @@ final class SensorsTests: XCTestCase {
     }
 
     func testEffectiveTemperature_skipsMissingDrivers() {
-        forceCelsius()
         let sensors: [Sensor_p] = [
             makeTempSensor(key: "TC0D", value: 60),
         ]

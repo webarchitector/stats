@@ -24,6 +24,8 @@ internal class Settings: NSStackView, Settings_v {
     private var profilePopup: NSPopUpButton?
     private var pointsTable: NSTableView?
     private let pointsDataSource = CurvePointsTable()
+    private var driversTable: NSTableView?
+    private let driversDataSource = DriversTable()
 
     public var callback: (() -> Void) = {}
     public var HIDcallback: (() -> Void) = {}
@@ -156,6 +158,23 @@ internal class Settings: NSStackView, Settings_v {
         pointBtnRow.spacing = 8
         curveContainer.addArrangedSubview(pointBtnRow)
 
+        let driversTableView = NSTableView()
+        let driverCol = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("driver"))
+        driverCol.title = localizedString("Driver sensors (max of)")
+        driversTableView.addTableColumn(driverCol)
+        driversTableView.dataSource = self.driversDataSource
+        driversTableView.delegate = self.driversDataSource
+        self.driversDataSource.onToggle = { [weak self] sel in
+            self?.persistDriverEdits(Array(sel))
+        }
+        let driverScroll = NSScrollView()
+        driverScroll.documentView = driversTableView
+        driverScroll.hasVerticalScroller = true
+        driverScroll.translatesAutoresizingMaskIntoConstraints = false
+        driverScroll.heightAnchor.constraint(equalToConstant: 150).isActive = true
+        self.driversTable = driversTableView
+        curveContainer.addArrangedSubview(driverScroll)
+
         self.refreshCurveEditor()
     }
     
@@ -226,6 +245,7 @@ internal class Settings: NSStackView, Settings_v {
         guard let list else { return }
         self.list = self.unknownSensorsState ? list : list.filter({ $0.group != .unknown })
         self.load(widgets: [])
+        self.refreshDriversChecklist()
     }
     
     @objc private func toggleSensor(_ sender: NSControl) {
@@ -308,6 +328,38 @@ internal class Settings: NSStackView, Settings_v {
         let pts = ProfileStore.shared.activeProfile()?.points ?? []
         self.pointsDataSource.points = pts
         self.pointsTable?.reloadData()
+        self.refreshDriversChecklist()
+    }
+
+    private func refreshDriversChecklist() {
+        let profile = ProfileStore.shared.activeProfile()
+        let selected = Set(profile?.drivers.map(\.key) ?? [])
+        self.driversDataSource.selected = selected
+        let allTemps: [(String, String)] = self.list
+            .filter { $0.type == .temperature }
+            .map { ($0.key, $0.name) }
+        self.driversDataSource.allSensors = allTemps
+        self.driversTable?.reloadData()
+    }
+
+    private func persistDriverEdits(_ keys: [String]) {
+        var profiles = ProfileStore.shared.loadProfiles()
+        guard let activeID = ProfileStore.shared.activeProfileID,
+              let idx = profiles.firstIndex(where: { $0.id == activeID }) else { return }
+        if profiles[idx].isBuiltIn {
+            var copy = profiles[idx]
+            copy.id = UUID()
+            copy.isBuiltIn = false
+            copy.name = profiles[idx].name + " (custom)"
+            copy.drivers = keys.map { DriverSensor(key: $0) }
+            profiles.append(copy)
+            ProfileStore.shared.activeProfileID = copy.id
+        } else {
+            profiles[idx].drivers = keys.map { DriverSensor(key: $0) }
+        }
+        ProfileStore.shared.saveProfiles(profiles)
+        NotificationCenter.default.post(name: .fanProfileChanged, object: nil)
+        self.reloadProfilePicker()
     }
 
     @objc private func addPoint() {
@@ -376,6 +428,32 @@ internal class Settings: NSStackView, Settings_v {
         self.reloadProfilePicker()
         self.refreshCurveEditor()
         NotificationCenter.default.post(name: .fanProfileChanged, object: nil)
+    }
+
+    fileprivate final class DriversTable: NSObject, NSTableViewDataSource, NSTableViewDelegate {
+        var allSensors: [(key: String, name: String)] = []
+        var selected: Set<String> = []
+        var onToggle: (Set<String>) -> Void = { _ in }
+
+        func numberOfRows(in t: NSTableView) -> Int { allSensors.count }
+
+        func tableView(_ tv: NSTableView, viewFor col: NSTableColumn?, row: Int) -> NSView? {
+            guard row < allSensors.count else { return nil }
+            let s = allSensors[row]
+            let cb = NSButton(checkboxWithTitle: "\(s.name) (\(s.key))",
+                              target: self,
+                              action: #selector(self.toggle(_:)))
+            cb.tag = row
+            cb.state = selected.contains(s.key) ? .on : .off
+            return cb
+        }
+
+        @objc fileprivate func toggle(_ sender: NSButton) {
+            guard sender.tag < allSensors.count else { return }
+            let key = allSensors[sender.tag].key
+            if sender.state == .on { selected.insert(key) } else { selected.remove(key) }
+            onToggle(selected)
+        }
     }
 
     fileprivate final class CurvePointsTable: NSObject, NSTableViewDataSource, NSTableViewDelegate {

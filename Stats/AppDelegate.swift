@@ -62,7 +62,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         let startingPoint = self.launchStart ?? Date()
-        
+
+        // Belt-and-suspenders single-instance enforcement. Info.plist already
+        // sets LSMultipleInstancesProhibited but LaunchServices doesn't always
+        // honor it (e.g. `open -n`, double-clicking the .app via Finder while
+        // a different copy of the bundle ran from elsewhere). If another
+        // Stats process is alive, activate it and quit ourselves.
+        if Self.anotherInstanceIsRunning() {
+            NSApplication.shared.terminate(self)
+            return
+        }
+
         self.parseArguments()
         self.parseVersion()
         SMCHelper.shared.checkForUpdate()
@@ -118,6 +128,19 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         self.ensureSettingsWindow().open(module: module)
     }
     
+    /// True if a Stats process other than self is already running. Activates
+    /// the existing instance so the user sees menubar widgets jump.
+    private static func anotherInstanceIsRunning() -> Bool {
+        let myPID = ProcessInfo.processInfo.processIdentifier
+        let myBundle = Bundle.main.bundleIdentifier ?? "eu.exelban.Stats"
+        let peers = NSWorkspace.shared.runningApplications.filter {
+            $0.bundleIdentifier == myBundle && $0.processIdentifier != myPID
+        }
+        guard let peer = peers.first else { return false }
+        peer.activate(options: [.activateIgnoringOtherApps])
+        return true
+    }
+
     private func showSettingsIfNoActiveWidgets() {
         if self.pauseState { return }
         let hasActive = modules.contains(where: { $0.enabled != false && $0.available != false && !$0.menuBar.widgets.filter({ $0.isActive }).isEmpty })

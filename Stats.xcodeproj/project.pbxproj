@@ -218,6 +218,7 @@
 		9AF9EE0F2464875F005D2270 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AF9EE0E2464875F005D2270 /* main.swift */; };
 		9AF9EE1124648ADC005D2270 /* readers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AF9EE1024648ADC005D2270 /* readers.swift */; };
 		AA00000000000000000000A1 /* libIOReport.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C1E45552D11D66200525864 /* libIOReport.tbd */; };
+		B85DB7409048525C8583C63B /* fanCurve.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5953BDA1E924935D3DB7E8B7 /* fanCurve.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -528,6 +529,7 @@
 		4921436D25319699000A1C47 /* ko */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ko; path = ko.lproj/Localizable.strings; sourceTree = "<group>"; };
 		4F92E6432D0F293100EA593F /* fi */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = fi; path = fi.lproj/Localizable.strings; sourceTree = "<group>"; };
 		58091506F3B289B231B39FE3 /* Sensors.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Sensors.swift; sourceTree = "<group>"; };
+		5953BDA1E924935D3DB7E8B7 /* fanCurve.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = fanCurve.swift; path = Modules/Sensors/fanCurve.swift; sourceTree = SOURCE_ROOT; };
 		5C038CF52D86EE8700516809 /* SystemStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemStats.swift; sourceTree = "<group>"; };
 		5C044F792B3DE6F3005F6951 /* portal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = portal.swift; sourceTree = "<group>"; };
 		5C0A2A89292A5B4D009B4C1F /* SMJobBlessUtil.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = SMJobBlessUtil.py; sourceTree = "<group>"; };
@@ -1344,6 +1346,7 @@
 				9AE29AF4249A52870071B02D /* config.plist */,
 				9A3616E82613C3D400D657B6 /* bridge.h */,
 				9AB6D03826447CAA003215A5 /* reader.m */,
+				5953BDA1E924935D3DB7E8B7 /* fanCurve.swift */,
 			);
 			path = Sensors;
 			sourceTree = "<group>";
@@ -2347,6 +2350,7 @@
 				9A58DE9E24B363D800716A9F /* popup.swift in Sources */,
 				9AE29AF3249A51D70071B02D /* main.swift in Sources */,
 				9A58DEA024B363F300716A9F /* settings.swift in Sources */,
+				B85DB7409048525C8583C63B /* fanCurve.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

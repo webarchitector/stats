@@ -245,4 +245,48 @@ final class SensorsTests: XCTestCase {
         XCTAssertEqual(decoded[0].id, list[0].id)
         XCTAssertEqual(decoded[1].id, list[1].id)
     }
+
+    // MARK: - interpolate
+
+    private let curveA: [CurvePoint] = [
+        CurvePoint(tempC: 40, rpm: 1000),
+        CurvePoint(tempC: 60, rpm: 3000),
+        CurvePoint(tempC: 80, rpm: 6000),
+    ]
+
+    func testInterpolate_emptyPoints_returnsZero() {
+        XCTAssertEqual(FanCurve.interpolate(points: [], tempC: 50), 0)
+    }
+
+    func testInterpolate_belowFirst_returnsFirstRpm() {
+        XCTAssertEqual(FanCurve.interpolate(points: curveA, tempC: 20), 1000)
+        XCTAssertEqual(FanCurve.interpolate(points: curveA, tempC: 40), 1000)
+    }
+
+    func testInterpolate_aboveLast_returnsLastRpm() {
+        XCTAssertEqual(FanCurve.interpolate(points: curveA, tempC: 100), 6000)
+        XCTAssertEqual(FanCurve.interpolate(points: curveA, tempC: 80), 6000)
+    }
+
+    func testInterpolate_midpointBetweenTwoPoints() {
+        // halfway between (40,1000) and (60,3000) at temp=50 → rpm=2000
+        XCTAssertEqual(FanCurve.interpolate(points: curveA, tempC: 50), 2000)
+        // halfway between (60,3000) and (80,6000) at temp=70 → rpm=4500
+        XCTAssertEqual(FanCurve.interpolate(points: curveA, tempC: 70), 4500)
+    }
+
+    func testInterpolate_singlePoint_returnsThatRpm() {
+        let p = [CurvePoint(tempC: 50, rpm: 2500)]
+        XCTAssertEqual(FanCurve.interpolate(points: p, tempC: 20), 2500)
+        XCTAssertEqual(FanCurve.interpolate(points: p, tempC: 50), 2500)
+        XCTAssertEqual(FanCurve.interpolate(points: p, tempC: 80), 2500)
+    }
+
+    func testInterpolate_intermediateRoundsToInt() {
+        // Between (40,1000) and (60,3001) at temp=50 — midpoint rpm = 2000.5
+        let pts = [CurvePoint(tempC: 40, rpm: 1000), CurvePoint(tempC: 60, rpm: 3001)]
+        // accept either 2000 or 2001 (rounding mode is impl-defined but value is bounded)
+        let r = FanCurve.interpolate(points: pts, tempC: 50)
+        XCTAssertTrue(r == 2000 || r == 2001, "got \(r)")
+    }
 }

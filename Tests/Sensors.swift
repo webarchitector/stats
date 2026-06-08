@@ -858,6 +858,23 @@ final class SensorsTests: XCTestCase {
 
     // MARK: - Controller profile-change reset
 
+    // MARK: - Controller bootstrap on first tick
+
+    func testController_firstTick_bootstrapsProfilesAndPicksAggressive() {
+        clearProfileStore()
+        let store = ProfileStore()
+        store.enabled = true
+        let fake = FakeFanCurveHelper()
+        let c = FanCurveController(helper: fake, store: store)
+        XCTAssertEqual(store.loadProfiles().count, 0, "precondition: empty store")
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0, max: 7000)],
+            temps: [("TC0D", 50)]))
+        XCTAssertEqual(store.loadProfiles().count, 4)
+        XCTAssertEqual(store.activeProfile()?.name, "Aggressive")
+        clearProfileStore()
+    }
+
     func testController_profileChangedNotification_resetsLastApplied() {
         clearProfileStore()
         let p1 = FanProfile(name: "P1",

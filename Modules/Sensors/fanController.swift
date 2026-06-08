@@ -41,6 +41,7 @@ public final class FanCurveController {
     private var lastApplied: [Int: Int] = [:]
     private var lastTempForHyst: [Int: Double] = [:]
     private var isAsleep: Bool = false
+    private var didBootstrap: Bool = false
     private var observers: [(NotificationCenter, NSObjectProtocol)] = []
 
     public init(helper: FanCurveHelper, store: ProfileStore) {
@@ -89,6 +90,13 @@ public final class FanCurveController {
               helper.isActive(),
               let snapshot = snapshot else { return }
 
+        let fans = snapshot.sensors.compactMap { $0 as? Fan }
+        if !didBootstrap, !fans.isEmpty {
+            let maxRpm = Int(fans.map(\.maxSpeed).max() ?? 7000)
+            store.bootstrapIfNeeded(fanCount: fans.count, defaultMaxRPM: maxRpm)
+            didBootstrap = true
+        }
+
         guard let profile = store.activeProfile(),
               !profile.points.isEmpty else {
             relinquish()
@@ -98,7 +106,6 @@ public final class FanCurveController {
         guard let effTemp = FanCurve.effectiveTemperature(
             sensors: snapshot.sensors, drivers: profile.drivers) else { return }
 
-        let fans = snapshot.sensors.compactMap { $0 as? Fan }
         for fan in fans {
             let base = FanCurve.interpolate(points: profile.points, tempC: effTemp)
             let off = (fan.id == 0) ? 0 : profile.fanOffsetRPM

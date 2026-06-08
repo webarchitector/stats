@@ -18,20 +18,21 @@ public class Sensors: Module {
     private let settingsView: Settings
     private let portalView: Portal
     private let notificationsView: Notifications
-    
+    private var fanController: FanCurveController?
+
     private var fanValueState: FanValue {
         FanValue(rawValue: Store.shared.string(key: "\(self.config.name)_fanValue", defaultValue: "percentage")) ?? .percentage
     }
-    
+
     private var selectedSensor: String
-    
+
     public init() {
         self.settingsView = Settings(.sensors)
         self.popupView = Popup()
         self.portalView = Portal(.sensors)
         self.notificationsView = Notifications(.sensors)
         self.selectedSensor = Store.shared.string(key: "\(ModuleType.sensors.stringValue)_sensor", defaultValue: "Average System Total")
-        
+
         super.init(
             moduleType: .sensors,
             popup: self.popupView,
@@ -40,9 +41,15 @@ public class Sensors: Module {
             notifications: self.notificationsView
         )
         guard self.available else { return }
-        
+
+        let profileStore = ProfileStore.shared
+        let curveHelper = SMCHelperAdapter.shared
+        self.fanController = FanCurveController(helper: curveHelper, store: profileStore)
+        Self.resetStaleCurveModes(helper: curveHelper, store: profileStore)
+
         self.sensorsReader = SensorsReader { [weak self] value in
             self?.usageCallback(value)
+            self?.fanController?.tick(snapshot: value)
         }
         
         self.settingsView.setList(self.sensorsReader?.list.sensors)
@@ -88,12 +95,33 @@ public class Sensors: Module {
     }
     
     public override func willTerminate() {
+        self.fanController?.shutdown()
+
         guard SMCHelper.shared.isActive(), let reader = self.sensorsReader else { return }
-        
+
         reader.list.sensors.filter({ $0 is Fan }).forEach { (s: Sensor_p) in
             if let f = s as? Fan, let mode = f.customMode {
-                if !mode.isAutomatic {
+                if !mode.isAutomatic && !mode.isStatsControlled {
                     SMCHelper.shared.setFanMode(f.id, mode: FanMode.automatic.rawValue)
+                }
+            }
+        }
+    }
+
+    /// Crash recovery: any fan whose stored customMode is .curve but where Stats is no
+    /// longer enabled or has no active profile gets reset to automatic to avoid stuck
+    /// forced RPM on the hardware.
+    private static func resetStaleCurveModes(helper: FanCurveHelper, store: ProfileStore) {
+        guard helper.isActive() else { return }
+        for id in 0...3 {
+            let key = "fan_\(id)_mode"
+            guard Store.shared.exist(key: key) else { continue }
+            let raw = Store.shared.int(key: key, defaultValue: 0)
+            if raw == FanMode.curve.rawValue {
+                let activeOK = store.enabled && store.activeProfile() != nil
+                if !activeOK {
+                    helper.setFanMode(id: id, mode: FanMode.automatic.rawValue)
+                    Store.shared.set(key: key, value: FanMode.automatic.rawValue)
                 }
             }
         }

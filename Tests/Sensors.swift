@@ -7,8 +7,16 @@
 
 import XCTest
 @testable import Sensors
+import Kit
 
 final class SensorsTests: XCTestCase {
+    // Sensors and Kit both compile in smc.swift, so FanMode is declared in both
+    // module namespaces. Bare `FanMode` is ambiguous; qualify via Kit (Sensors
+    // is also a class in that module and shadows the module name).
+    // The two FanMode declarations are structurally identical — pinning either
+    // locks the SMC ABI surface for both.
+    private typealias FanMode = Kit.FanMode
+
     // MARK: - FanMode.isAutomatic
 
     func testFanMode_isAutomatic_trueForAutomatic() {
@@ -69,5 +77,65 @@ final class SensorsTests: XCTestCase {
         // existing impl guards (value != 1 && maxSpeed != 1) — preserve that quirk
         XCTAssertEqual(makeFan(value: 1, maxSpeed: 7000).percentage, 0)
         XCTAssertEqual(makeFan(value: 3500, maxSpeed: 1).percentage, 0)
+    }
+
+    // MARK: - Fan.customMode / customSpeed persistence
+
+    // Store.shared keeps an internal cache layered on top of UserDefaults.standard;
+    // clearing UserDefaults alone leaves the cache stale, so go through Store.
+    private func clearStore(fanID: Int) {
+        Store.shared.remove("fan_\(fanID)_speed")
+        Store.shared.remove("fan_\(fanID)_mode")
+    }
+
+    func testFan_customSpeed_nilByDefault() {
+        clearStore(fanID: 99)
+        let fan = Fan(id: 99, key: "F0Ac", name: "x",
+                      minSpeed: 1000, maxSpeed: 7000, value: 0, mode: .automatic)
+        XCTAssertNil(fan.customSpeed)
+    }
+
+    func testFan_customSpeed_roundtrip() {
+        clearStore(fanID: 99)
+        var fan = Fan(id: 99, key: "F0Ac", name: "x",
+                      minSpeed: 1000, maxSpeed: 7000, value: 0, mode: .automatic)
+        fan.customSpeed = 4321
+        XCTAssertEqual(fan.customSpeed, 4321)
+        clearStore(fanID: 99)
+    }
+
+    func testFan_customSpeed_nilClears() {
+        clearStore(fanID: 99)
+        var fan = Fan(id: 99, key: "F0Ac", name: "x",
+                      minSpeed: 1000, maxSpeed: 7000, value: 0, mode: .automatic)
+        fan.customSpeed = 4321
+        fan.customSpeed = nil
+        XCTAssertNil(fan.customSpeed)
+    }
+
+    func testFan_customMode_nilByDefault() {
+        clearStore(fanID: 98)
+        let fan = Fan(id: 98, key: "F0Ac", name: "x",
+                      minSpeed: 1000, maxSpeed: 7000, value: 0, mode: .automatic)
+        XCTAssertNil(fan.customMode)
+    }
+
+    func testFan_customMode_roundtrip() {
+        clearStore(fanID: 98)
+        var fan = Fan(id: 98, key: "F0Ac", name: "x",
+                      minSpeed: 1000, maxSpeed: 7000, value: 0, mode: .automatic)
+        fan.customMode = .forced
+        XCTAssertEqual(fan.customMode, .forced)
+        clearStore(fanID: 98)
+    }
+
+    func testFan_customMode_nilClears() {
+        clearStore(fanID: 98)
+        var fan = Fan(id: 98, key: "F0Ac", name: "x",
+                      minSpeed: 1000, maxSpeed: 7000, value: 0, mode: .automatic)
+        fan.customMode = .forced
+        fan.customMode = nil
+        XCTAssertNil(fan.customMode)
+        clearStore(fanID: 98)
     }
 }

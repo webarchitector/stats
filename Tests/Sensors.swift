@@ -418,6 +418,13 @@ final class SensorsTests: XCTestCase {
         Store.shared.remove("fanctl_profiles")
         Store.shared.remove("fanctl_activeProfile")
         Store.shared.remove("fanctl_enabled")
+        // Per-fan state leaks across tests since Store.shared is a singleton.
+        // Controller writes fan_<id>_mode = .curve(100); user paths write
+        // .forced(1). Tests rely on a clean slate.
+        for id in 0...3 {
+            Store.shared.remove("fan_\(id)_mode")
+            Store.shared.remove("fan_\(id)_speed")
+        }
     }
 
     func testProfileStore_loadEmpty_returnsEmptyArray() {

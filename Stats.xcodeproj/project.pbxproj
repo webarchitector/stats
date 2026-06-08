@@ -37,24 +37,6 @@
 		5C3068732C32E83200B05EFA /* widget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C3068722C32E83200B05EFA /* widget.swift */; };
 		5C30CD602F8A8F950001EF1C /* preview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C30CD5F2F8A8F930001EF1C /* preview.swift */; };
 		5C4A1F5D2F6099AA009CFEE6 /* preview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C4A1F5C2F6099A7009CFEE6 /* preview.swift */; };
-		5C4E8BA12B6EEE8E00F148B6 /* lldb.m in Sources */ = {isa = PBXBuildFile; fileRef = 5C4E8BA02B6EEE8E00F148B6 /* lldb.m */; };
-		5C4E8BB12B6EEEE800F148B6 /* filter_policy.h in Headers */ = {isa = PBXBuildFile; fileRef = 5C4E8BA22B6EEEE800F148B6 /* filter_policy.h */; };
-		5C4E8BB22B6EEEE800F148B6 /* export.h in Headers */ = {isa = PBXBuildFile; fileRef = 5C4E8BA32B6EEEE800F148B6 /* export.h */; };
-		5C4E8BB32B6EEEE800F148B6 /* slice.h in Headers */ = {isa = PBXBuildFile; fileRef = 5C4E8BA42B6EEEE800F148B6 /* slice.h */; };
-		5C4E8BB42B6EEEE800F148B6 /* write_batch.h in Headers */ = {isa = PBXBuildFile; fileRef = 5C4E8BA52B6EEEE800F148B6 /* write_batch.h */; };
-		5C4E8BB52B6EEEE800F148B6 /* status.h in Headers */ = {isa = PBXBuildFile; fileRef = 5C4E8BA62B6EEEE800F148B6 /* status.h */; };
-		5C4E8BB62B6EEEE800F148B6 /* iterator.h in Headers */ = {isa = PBXBuildFile; fileRef = 5C4E8BA72B6EEEE800F148B6 /* iterator.h */; };
-		5C4E8BB72B6EEEE800F148B6 /* table_builder.h in Headers */ = {isa = PBXBuildFile; fileRef = 5C4E8BA82B6EEEE800F148B6 /* table_builder.h */; };
-		5C4E8BB82B6EEEE800F148B6 /* env.h in Headers */ = {isa = PBXBuildFile; fileRef = 5C4E8BA92B6EEEE800F148B6 /* env.h */; };
-		5C4E8BB92B6EEEE800F148B6 /* comparator.h in Headers */ = {isa = PBXBuildFile; fileRef = 5C4E8BAA2B6EEEE800F148B6 /* comparator.h */; };
-		5C4E8BBA2B6EEEE800F148B6 /* c.h in Headers */ = {isa = PBXBuildFile; fileRef = 5C4E8BAB2B6EEEE800F148B6 /* c.h */; };
-		5C4E8BBB2B6EEEE800F148B6 /* options.h in Headers */ = {isa = PBXBuildFile; fileRef = 5C4E8BAC2B6EEEE800F148B6 /* options.h */; };
-		5C4E8BBC2B6EEEE800F148B6 /* table.h in Headers */ = {isa = PBXBuildFile; fileRef = 5C4E8BAD2B6EEEE800F148B6 /* table.h */; };
-		5C4E8BBD2B6EEEE800F148B6 /* cache.h in Headers */ = {isa = PBXBuildFile; fileRef = 5C4E8BAE2B6EEEE800F148B6 /* cache.h */; };
-		5C4E8BBE2B6EEEE800F148B6 /* dumpfile.h in Headers */ = {isa = PBXBuildFile; fileRef = 5C4E8BAF2B6EEEE800F148B6 /* dumpfile.h */; };
-		5C4E8BBF2B6EEEE800F148B6 /* db.h in Headers */ = {isa = PBXBuildFile; fileRef = 5C4E8BB02B6EEEE800F148B6 /* db.h */; };
-		5C4E8BC42B6EF65E00F148B6 /* libleveldb.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C4E8BC32B6EF65E00F148B6 /* libleveldb.a */; };
-		5C4E8BC72B6EF98800F148B6 /* DB.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C4E8BC62B6EF98800F148B6 /* DB.swift */; };
 		5C4E8BE92B71031A00F148B6 /* Kit.h in Headers */ = {isa = PBXBuildFile; fileRef = 5C4E8BE82B7102A700F148B6 /* Kit.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		5C50DB402FAF4CBE008BACB6 /* preview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C50DB3F2FAF4CBC008BACB6 /* preview.swift */; };
 		5C621D822B4770D6004ED7AF /* process.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C621D812B4770D6004ED7AF /* process.swift */; };
@@ -447,25 +429,6 @@
 		5C30CD5F2F8A8F930001EF1C /* preview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = preview.swift; sourceTree = "<group>"; };
 		5C32910A2C315A250010012D /* en-GB */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "en-GB"; path = "en-GB.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		5C4A1F5C2F6099A7009CFEE6 /* preview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = preview.swift; sourceTree = "<group>"; };
-		5C4E8B9F2B6EEE6D00F148B6 /* lldb.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = lldb.h; sourceTree = "<group>"; };
-		5C4E8BA02B6EEE8E00F148B6 /* lldb.m */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; path = lldb.m; sourceTree = "<group>"; };
-		5C4E8BA22B6EEEE800F148B6 /* filter_policy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = filter_policy.h; sourceTree = "<group>"; };
-		5C4E8BA32B6EEEE800F148B6 /* export.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = export.h; sourceTree = "<group>"; };
-		5C4E8BA42B6EEEE800F148B6 /* slice.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = slice.h; sourceTree = "<group>"; };
-		5C4E8BA52B6EEEE800F148B6 /* write_batch.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = write_batch.h; sourceTree = "<group>"; };
-		5C4E8BA62B6EEEE800F148B6 /* status.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = status.h; sourceTree = "<group>"; };
-		5C4E8BA72B6EEEE800F148B6 /* iterator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = iterator.h; sourceTree = "<group>"; };
-		5C4E8BA82B6EEEE800F148B6 /* table_builder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = table_builder.h; sourceTree = "<group>"; };
-		5C4E8BA92B6EEEE800F148B6 /* env.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = env.h; sourceTree = "<group>"; };
-		5C4E8BAA2B6EEEE800F148B6 /* comparator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = comparator.h; sourceTree = "<group>"; };
-		5C4E8BAB2B6EEEE800F148B6 /* c.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = c.h; sourceTree = "<group>"; };
-		5C4E8BAC2B6EEEE800F148B6 /* options.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = options.h; sourceTree = "<group>"; };
-		5C4E8BAD2B6EEEE800F148B6 /* table.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = table.h; sourceTree = "<group>"; };
-		5C4E8BAE2B6EEEE800F148B6 /* cache.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = cache.h; sourceTree = "<group>"; };
-		5C4E8BAF2B6EEEE800F148B6 /* dumpfile.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = dumpfile.h; sourceTree = "<group>"; };
-		5C4E8BB02B6EEEE800F148B6 /* db.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = db.h; sourceTree = "<group>"; };
-		5C4E8BC32B6EF65E00F148B6 /* libleveldb.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libleveldb.a; sourceTree = "<group>"; };
-		5C4E8BC62B6EF98800F148B6 /* DB.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DB.swift; sourceTree = "<group>"; };
 		5C4E8BE82B7102A700F148B6 /* Kit.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Kit.h; sourceTree = "<group>"; };
 		5C50DB3F2FAF4CBC008BACB6 /* preview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = preview.swift; sourceTree = "<group>"; };
 		5C621D812B4770D6004ED7AF /* process.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = process.swift; sourceTree = "<group>"; };
@@ -668,7 +631,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				5C4E8BC42B6EF65E00F148B6 /* libleveldb.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -769,39 +731,6 @@
 			path = Clock;
 			sourceTree = "<group>";
 		};
-		5C4E8B562B6EE10700F148B6 /* lldb */ = {
-			isa = PBXGroup;
-			children = (
-				5C4E8BC02B6EEF8C00F148B6 /* include */,
-				5C4E8BC32B6EF65E00F148B6 /* libleveldb.a */,
-				5C4E8BA02B6EEE8E00F148B6 /* lldb.m */,
-				5C4E8B9F2B6EEE6D00F148B6 /* lldb.h */,
-			);
-			path = lldb;
-			sourceTree = "<group>";
-		};
-		5C4E8BC02B6EEF8C00F148B6 /* include */ = {
-			isa = PBXGroup;
-			children = (
-				5C4E8BAB2B6EEEE800F148B6 /* c.h */,
-				5C4E8BAE2B6EEEE800F148B6 /* cache.h */,
-				5C4E8BAA2B6EEEE800F148B6 /* comparator.h */,
-				5C4E8BB02B6EEEE800F148B6 /* db.h */,
-				5C4E8BAF2B6EEEE800F148B6 /* dumpfile.h */,
-				5C4E8BA92B6EEEE800F148B6 /* env.h */,
-				5C4E8BA32B6EEEE800F148B6 /* export.h */,
-				5C4E8BA22B6EEEE800F148B6 /* filter_policy.h */,
-				5C4E8BA72B6EEEE800F148B6 /* iterator.h */,
-				5C4E8BAC2B6EEEE800F148B6 /* options.h */,
-				5C4E8BA42B6EEEE800F148B6 /* slice.h */,
-				5C4E8BA62B6EEEE800F148B6 /* status.h */,
-				5C4E8BA82B6EEEE800F148B6 /* table_builder.h */,
-				5C4E8BAD2B6EEEE800F148B6 /* table.h */,
-				5C4E8BA52B6EEEE800F148B6 /* write_batch.h */,
-			);
-			path = include;
-			sourceTree = "<group>";
-		};
 		5CFE492829264DF1000F2856 /* Helper */ = {
 			isa = PBXGroup;
 			children = (
@@ -869,7 +798,6 @@
 				9A28498D2666AE3400EC1F6D /* module */,
 				9AA81547266A9ACA008C01D0 /* plugins */,
 				9A46BF1E266D6DD0001A1117 /* scripts */,
-				5C4E8B562B6EE10700F148B6 /* lldb */,
 				9A28481B2666AB3500EC1F6D /* constants.swift */,
 				9A28481A2666AB3500EC1F6D /* extensions.swift */,
 				9A28481D2666AB3600EC1F6D /* helpers.swift */,
@@ -1061,7 +989,6 @@
 				9A6EEBBD2685259500897371 /* Logger.swift */,
 				9A5A8446271895B700BC40A4 /* Reachability.swift */,
 				9A302613286A2A3B00B41D57 /* Repeater.swift */,
-				5C4E8BC62B6EF98800F148B6 /* DB.swift */,
 			);
 			path = plugins;
 			sourceTree = "<group>";
@@ -1171,21 +1098,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				5C4E8BE92B71031A00F148B6 /* Kit.h in Headers */,
-				5C4E8BBF2B6EEEE800F148B6 /* db.h in Headers */,
-				5C4E8BB12B6EEEE800F148B6 /* filter_policy.h in Headers */,
-				5C4E8BBE2B6EEEE800F148B6 /* dumpfile.h in Headers */,
-				5C4E8BB42B6EEEE800F148B6 /* write_batch.h in Headers */,
-				5C4E8BB62B6EEEE800F148B6 /* iterator.h in Headers */,
-				5C4E8BB82B6EEEE800F148B6 /* env.h in Headers */,
-				5C4E8BB72B6EEEE800F148B6 /* table_builder.h in Headers */,
-				5C4E8BBD2B6EEEE800F148B6 /* cache.h in Headers */,
-				5C4E8BBC2B6EEEE800F148B6 /* table.h in Headers */,
-				5C4E8BB52B6EEEE800F148B6 /* status.h in Headers */,
-				5C4E8BB92B6EEEE800F148B6 /* comparator.h in Headers */,
-				5C4E8BBB2B6EEEE800F148B6 /* options.h in Headers */,
-				5C4E8BB32B6EEEE800F148B6 /* slice.h in Headers */,
-				5C4E8BBA2B6EEEE800F148B6 /* c.h in Headers */,
-				5C4E8BB22B6EEEE800F148B6 /* export.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1839,13 +1751,11 @@
 				9A2848212666AB3600EC1F6D /* helpers.swift in Sources */,
 				9A28477A2666AA5000EC1F6D /* window.swift in Sources */,
 				9A302614286A2A3B00B41D57 /* Repeater.swift in Sources */,
-				5C4E8BA12B6EEE8E00F148B6 /* lldb.m in Sources */,
 				9A5A8447271895B700BC40A4 /* Reachability.swift in Sources */,
 				9A28477C2666AA5000EC1F6D /* reader.swift in Sources */,
 				9A28480B2666AB3000EC1F6D /* Charts.swift in Sources */,
 				5CF2210D2B1E7EAF006C583F /* notifications.swift in Sources */,
 				9A6EEBBE2685259500897371 /* Logger.swift in Sources */,
-				5C4E8BC72B6EF98800F148B6 /* DB.swift in Sources */,
 				5C23BC0429A014AC00DBA990 /* portal.swift in Sources */,
 				9A2847792666AA5000EC1F6D /* module.swift in Sources */,
 				DD3B2242034ABE0225B621C4 /* Label.swift in Sources */,
@@ -2512,7 +2422,6 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/Frameworks",
 				);
-				LIBRARY_SEARCH_PATHS = "$(SRCROOT)/Kit/lldb";
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MARKETING_VERSION = 1.0;
 				OTHER_LDFLAGS = "-w";
@@ -2549,7 +2458,6 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/Frameworks",
 				);
-				LIBRARY_SEARCH_PATHS = "$(SRCROOT)/Kit/lldb";
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MARKETING_VERSION = 1.0;
 				OTHER_LDFLAGS = "-w";

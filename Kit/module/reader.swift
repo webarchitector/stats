@@ -77,8 +77,6 @@ open class Reader<T: Codable>: NSObject, ReaderInternal_p {
         set { self.activeQueue.sync { self._active = newValue } }
     }
     
-    private var lastDBWrite: Date? = nil
-    
     private var alignWorkItem: DispatchWorkItem?
     private let alignQueue = DispatchQueue(label: "eu.exelban.readerAlignQueue")
     
@@ -90,20 +88,11 @@ open class Reader<T: Codable>: NSObject, ReaderInternal_p {
         self.callbackHandler = callback
         
         super.init()
-        DB.shared.setup(T.self, "\(module.stringValue)@\(self.name)")
-        if let lastValue = DB.shared.findOne(T.self, key: "\(module.stringValue)@\(self.name)") {
-            self.value = lastValue
-            callback(lastValue)
-        }
         self.setup()
-        
+
         debug("Successfully initialize reader", log: self.log)
     }
-    
-    deinit {
-        DB.shared.insert(key: "\(self.module.stringValue)@\(self.name)", value: self.value, ts: self.history)
-    }
-    
+
     public func initStoreValues(title: String) {
         guard self.interval == nil else { return }
         let updateInterval = Store.shared.int(key: "\(title)_updateInterval", defaultValue: self.defaultInterval)
@@ -111,17 +100,9 @@ open class Reader<T: Codable>: NSObject, ReaderInternal_p {
     }
     
     public func callback(_ value: T?) {
-        let moduleKey = "\(self.module.stringValue)@\(self.name)"
         self.value = value
         if let value {
             self.callbackHandler(value)
-            if let ts = self.lastDBWrite, let interval = self.interval, Date().timeIntervalSince(ts) > interval * 10 {
-                DB.shared.insert(key: moduleKey, value: value, ts: self.history)
-                self.lastDBWrite = Date()
-            } else if self.lastDBWrite == nil {
-                DB.shared.insert(key: moduleKey, value: value, ts: self.history)
-                self.lastDBWrite = Date()
-            }
         }
     }
     
@@ -184,9 +165,9 @@ open class Reader<T: Codable>: NSObject, ReaderInternal_p {
     }
     
     public func save(_ value: T) {
-        DB.shared.insert(key: "\(self.module.stringValue)@\(self.name)", value: value, ts: self.history, force: true)
+        self.value = value
     }
-    
+
     private func delayToNextSecondBoundary() -> TimeInterval {
         let now = Date().addingTimeInterval(self.alignOffset)
         let fractional = now.timeIntervalSince1970.truncatingRemainder(dividingBy: 1.0)

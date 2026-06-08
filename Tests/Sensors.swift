@@ -651,11 +651,16 @@ final class SensorsTests: XCTestCase {
         clearProfileStore()
         let store = enabledStoreWithCustomProfile(linearProfile)
         let fake = FakeFanCurveHelper()
-        let c = FanCurveController(helper: fake, store: store)
+        // Advance >5s between ticks so the new smoothing window prunes the
+        // prior sample — keeps this test focused on throttle behavior, not
+        // smoothing or derivative artifacts of two near-simultaneous samples.
+        let clock = FakeFanControllerClock()
+        let c = FanCurveController(helper: fake, store: store, clock: clock)
         // temp=55 → rpm=3500, temp=55.5 → rpm=3550 (delta=50 < threshold=200)
         c.tick(snapshot: makeControllerSnapshot(
             fans: [makeControllerFan(id: 0)], temps: [("TC0D", 55)]))
         XCTAssertEqual(fake.speedCalls.count, 1)
+        clock.advance(by: 6)
         c.tick(snapshot: makeControllerSnapshot(
             fans: [makeControllerFan(id: 0)], temps: [("TC0D", 55.5)]))
         XCTAssertEqual(fake.speedCalls.count, 1, "delta < threshold should suppress")
@@ -666,10 +671,12 @@ final class SensorsTests: XCTestCase {
         clearProfileStore()
         let store = enabledStoreWithCustomProfile(linearProfile)
         let fake = FakeFanCurveHelper()
-        let c = FanCurveController(helper: fake, store: store)
+        let clock = FakeFanControllerClock()
+        let c = FanCurveController(helper: fake, store: store, clock: clock)
         // temp=55 → 3500, temp=60 → 4000 (delta=500 ≥ threshold)
         c.tick(snapshot: makeControllerSnapshot(
             fans: [makeControllerFan(id: 0)], temps: [("TC0D", 55)]))
+        clock.advance(by: 6)  // prune prior sample so smoothing/derivative don't skew
         c.tick(snapshot: makeControllerSnapshot(
             fans: [makeControllerFan(id: 0)], temps: [("TC0D", 60)]))
         XCTAssertEqual(fake.speedCalls.map(\.rpm), [3500, 4000])
@@ -702,10 +709,13 @@ final class SensorsTests: XCTestCase {
             fanOffsetRPM: 0, hysteresisC: 5.0, deltaRpmThreshold: 100)
         let store = enabledStoreWithCustomProfile(p)
         let fake = FakeFanCurveHelper()
-        let c = FanCurveController(helper: fake, store: store)
+        let clock = FakeFanControllerClock()
+        let c = FanCurveController(helper: fake, store: store, clock: clock)
         c.tick(snapshot: makeControllerSnapshot(
             fans: [makeControllerFan(id: 0)], temps: [("TC0D", 70)]))
-        // tempDrop=6 > hyst=5 → allow
+        // tempDrop=6 > hyst=5 → allow. Advance past smoothing window so prior
+        // sample is pruned and the assertion is exclusively about hysteresis.
+        clock.advance(by: 6)
         c.tick(snapshot: makeControllerSnapshot(
             fans: [makeControllerFan(id: 0)], temps: [("TC0D", 64)]))
         XCTAssertEqual(fake.speedCalls.count, 2)
@@ -911,6 +921,300 @@ final class SensorsTests: XCTestCase {
         c.tick(snapshot: makeControllerSnapshot(
             fans: [makeControllerFan(id: 0)], temps: [("TC0D", 69)]))
         XCTAssertEqual(fake.speedCalls.count, 1, "profile change should clear hysteresis state")
+        clearProfileStore()
+    }
+
+    // MARK: - Smart fan features (smoothing, derivative, battery)
+
+    /// Linear profile used by smoothing/derivative tests: each 1°C ≙ 100 RPM,
+    /// no offset/hysteresis/throttle so the curve target is the only signal.
+    private var smartLinearProfile: FanProfile {
+        FanProfile(name: "SmartLinear",
+            drivers: [DriverSensor(key: "TC0D")],
+            points: [CurvePoint(tempC: 30, rpm: 1000), CurvePoint(tempC: 80, rpm: 6000)],
+            fanOffsetRPM: 0, hysteresisC: 0.0, deltaRpmThreshold: 1)
+    }
+
+    /// Tick `controller` at a synthetic time and CPU temp. Returns the last
+    /// `setFanSpeed` call recorded by `fake`, or nil if nothing was applied
+    /// (throttled / hyst-blocked / fan unmanaged).
+    @discardableResult
+    private func tickAt(_ controller: FanCurveController, clock: FakeFanControllerClock,
+                        fake: FakeFanCurveHelper, advance: TimeInterval,
+                        fans: [Fan], temps: [(String, Double)]) -> FakeFanCurveHelper.SpeedCall? {
+        clock.advance(by: advance)
+        let before = fake.speedCalls.count
+        controller.tick(snapshot: makeControllerSnapshot(fans: fans, temps: temps))
+        return fake.speedCalls.count > before ? fake.speedCalls.last : nil
+    }
+
+    // --- median helper (exposed via _medianForTests) ---
+
+    func testMedian_emptyReturnsZero() {
+        XCTAssertEqual(FanCurveController._medianForTests([]), 0)
+    }
+
+    func testMedian_singleReturnsItself() {
+        XCTAssertEqual(FanCurveController._medianForTests([42.5]), 42.5)
+    }
+
+    func testMedian_threeSorted() {
+        XCTAssertEqual(FanCurveController._medianForTests([1, 2, 3]), 2)
+    }
+
+    func testMedian_threeUnsorted() {
+        XCTAssertEqual(FanCurveController._medianForTests([3, 1, 2]), 2)
+    }
+
+    func testMedian_evenCountAveragesMiddle() {
+        XCTAssertEqual(FanCurveController._medianForTests([1, 2, 3, 4]), 2.5)
+        XCTAssertEqual(FanCurveController._medianForTests([10, 20]), 15)
+    }
+
+    // --- smoothing ---
+
+    func testSmoothing_singleSampleMatchesRaw() {
+        clearProfileStore()
+        let store = enabledStoreWithCustomProfile(smartLinearProfile)
+        let fake = FakeFanCurveHelper()
+        let clock = FakeFanControllerClock()
+        let c = FanCurveController(helper: fake, store: store, clock: clock)
+        let fan = makeControllerFan(id: 0)
+        // One sample at 60°C → curve = 1000 + 30*100 = 4000. Single sample,
+        // no prior data → derivative = 0, no battery → target = 4000.
+        tickAt(c, clock: clock, fake: fake, advance: 0,
+               fans: [fan], temps: [("TC0D", 60)])
+        XCTAssertEqual(fake.speedCalls.last?.rpm, 4000)
+        clearProfileStore()
+    }
+
+    func testSmoothing_threeSamplesUseMedian() {
+        clearProfileStore()
+        let store = enabledStoreWithCustomProfile(smartLinearProfile)
+        let fake = FakeFanCurveHelper()
+        let clock = FakeFanControllerClock()
+        let c = FanCurveController(helper: fake, store: store, clock: clock)
+        let fan = makeControllerFan(id: 0)
+        // Samples 50, 100, 60 — median = 60. Curve(60) = 4000.
+        // first/last (50→60) over 2s = 5 C/s → derivative bonus +500.
+        // Expected target = 4000 + 500 = 4500. The point is: NOT 6000 (which
+        // is what the noisy 100°C spike would produce without smoothing).
+        tickAt(c, clock: clock, fake: fake, advance: 0,
+               fans: [fan], temps: [("TC0D", 50)])
+        tickAt(c, clock: clock, fake: fake, advance: 1,
+               fans: [fan], temps: [("TC0D", 100)])
+        tickAt(c, clock: clock, fake: fake, advance: 1,
+               fans: [fan], temps: [("TC0D", 60)])
+        XCTAssertEqual(fake.speedCalls.last?.rpm, 4500,
+                       "median(50,100,60)=60 → curve=4000 + derivative bonus 500")
+        clearProfileStore()
+    }
+
+    func testSmoothing_oldSamplesPruned() {
+        clearProfileStore()
+        let store = enabledStoreWithCustomProfile(smartLinearProfile)
+        let fake = FakeFanCurveHelper()
+        let clock = FakeFanControllerClock()
+        let c = FanCurveController(helper: fake, store: store, clock: clock)
+        let fan = makeControllerFan(id: 0)
+        // Three samples at 50°C
+        tickAt(c, clock: clock, fake: fake, advance: 0,
+               fans: [fan], temps: [("TC0D", 50)])
+        tickAt(c, clock: clock, fake: fake, advance: 1,
+               fans: [fan], temps: [("TC0D", 50)])
+        tickAt(c, clock: clock, fake: fake, advance: 1,
+               fans: [fan], temps: [("TC0D", 50)])
+        // Jump past 5s window — old samples should be pruned out
+        tickAt(c, clock: clock, fake: fake, advance: 10,
+               fans: [fan], temps: [("TC0D", 70)])
+        // Only new sample remains in window → median = 70 → curve = 5000.
+        // derivative = 0 (single sample after prune), battery = 0.
+        XCTAssertEqual(fake.speedCalls.last?.rpm, 5000,
+                       "pruned old samples → median(70)=70 → curve=5000")
+        clearProfileStore()
+    }
+
+    func testSmoothing_resetOnProfileChange() {
+        clearProfileStore()
+        let store = enabledStoreWithCustomProfile(smartLinearProfile)
+        let fake = FakeFanCurveHelper()
+        let clock = FakeFanControllerClock()
+        let c = FanCurveController(helper: fake, store: store, clock: clock)
+        let fan = makeControllerFan(id: 0)
+        // Stack three samples (would median to 60 → 4000 with +500 derivative)
+        tickAt(c, clock: clock, fake: fake, advance: 0,
+               fans: [fan], temps: [("TC0D", 50)])
+        tickAt(c, clock: clock, fake: fake, advance: 1,
+               fans: [fan], temps: [("TC0D", 100)])
+        // Profile-change observer wipes tempSamples + batteryHotSince
+        NotificationCenter.default.post(name: .fanProfileChanged, object: nil)
+        // Let main-queue async observer block drain
+        RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+        fake.reset()
+        // Next tick is effectively first-of-session: 60°C → curve = 4000,
+        // derivative = 0 (only one sample), no bonus.
+        tickAt(c, clock: clock, fake: fake, advance: 1,
+               fans: [fan], temps: [("TC0D", 60)])
+        XCTAssertEqual(fake.speedCalls.last?.rpm, 4000,
+                       "samples must be reset on profile change")
+        clearProfileStore()
+    }
+
+    // --- derivative pre-ramp ---
+
+    func testDerivative_belowThreshold_noBonus() {
+        clearProfileStore()
+        let store = enabledStoreWithCustomProfile(smartLinearProfile)
+        let fake = FakeFanCurveHelper()
+        let clock = FakeFanControllerClock()
+        let c = FanCurveController(helper: fake, store: store, clock: clock)
+        let fan = makeControllerFan(id: 0)
+        // 50 → 51 over 2s = 0.5°C/s, below 2°C/s threshold.
+        // Median of (50, 51) = 50.5 → curve = 1000 + 20.5*100 = 3050.
+        tickAt(c, clock: clock, fake: fake, advance: 0,
+               fans: [fan], temps: [("TC0D", 50)])
+        tickAt(c, clock: clock, fake: fake, advance: 2,
+               fans: [fan], temps: [("TC0D", 51)])
+        XCTAssertEqual(fake.speedCalls.last?.rpm, 3050,
+                       "0.5°C/s < 2°C/s threshold → no derivative bonus")
+        clearProfileStore()
+    }
+
+    func testDerivative_atOrAboveThreshold_addsBonus() {
+        clearProfileStore()
+        let store = enabledStoreWithCustomProfile(smartLinearProfile)
+        let fake = FakeFanCurveHelper()
+        let clock = FakeFanControllerClock()
+        let c = FanCurveController(helper: fake, store: store, clock: clock)
+        let fan = makeControllerFan(id: 0)
+        // 50 → 60 over 2s = 5°C/s, above threshold → +500 RPM bonus.
+        // Median(50,60) = 55 → curve = 1000 + 25*100 = 3500. +500 = 4000.
+        tickAt(c, clock: clock, fake: fake, advance: 0,
+               fans: [fan], temps: [("TC0D", 50)])
+        tickAt(c, clock: clock, fake: fake, advance: 2,
+               fans: [fan], temps: [("TC0D", 60)])
+        XCTAssertEqual(fake.speedCalls.last?.rpm, 4000,
+                       "5°C/s ≥ 2°C/s → curve(55)=3500 + bonus 500 = 4000")
+        clearProfileStore()
+    }
+
+    func testDerivative_clampedByMaxSpeed() {
+        clearProfileStore()
+        let store = enabledStoreWithCustomProfile(smartLinearProfile)
+        let fake = FakeFanCurveHelper()
+        let clock = FakeFanControllerClock()
+        let c = FanCurveController(helper: fake, store: store, clock: clock)
+        // maxSpeed = 5800. After ticks at 70 then 80:
+        //   median(70,80)=75 → curve = 1000+45*100 = 5500
+        //   derivative = (80-70)/2 = 5°C/s → bonus +500 → raw 6000
+        //   clamp to fan.maxSpeed = 5800.
+        let fan = makeControllerFan(id: 0, max: 5800)
+        tickAt(c, clock: clock, fake: fake, advance: 0,
+               fans: [fan], temps: [("TC0D", 70)])
+        tickAt(c, clock: clock, fake: fake, advance: 2,
+               fans: [fan], temps: [("TC0D", 80)])
+        XCTAssertEqual(fake.speedCalls.last?.rpm, 5800,
+                       "derivative bonus must be clamped to fan.maxSpeed")
+        clearProfileStore()
+    }
+
+    // --- battery temp safety floor ---
+
+    private func makeBattSensor(value: Double) -> Sensor {
+        Sensor(key: "TB1T", name: "Battery 1", value: value,
+               group: .sensor, type: .temperature, platforms: Platform.all)
+    }
+
+    private func makeBattSnapshot(fans: [Fan], cpu: Double, batt: Double) -> Sensors_List {
+        let list = Sensors_List()
+        list.sensors = [
+            makeTempSensor(key: "TC0D", value: cpu),
+            makeBattSensor(value: batt)
+        ] + fans.map { $0 as Sensor_p }
+        return list
+    }
+
+    func testBatterySafety_belowThreshold_noFloor() {
+        clearProfileStore()
+        let store = enabledStoreWithCustomProfile(smartLinearProfile)
+        let fake = FakeFanCurveHelper()
+        let clock = FakeFanControllerClock()
+        let c = FanCurveController(helper: fake, store: store, clock: clock)
+        let fan = makeControllerFan(id: 0)
+        // CPU at 50 → curve = 3000. Battery at 35°C → no floor.
+        c.tick(snapshot: makeBattSnapshot(fans: [fan], cpu: 50, batt: 35))
+        XCTAssertEqual(fake.speedCalls.last?.rpm, 3000)
+        clearProfileStore()
+    }
+
+    func testBatterySafety_aboveThresholdShortDuration_noFloor() {
+        clearProfileStore()
+        let store = enabledStoreWithCustomProfile(smartLinearProfile)
+        let fake = FakeFanCurveHelper()
+        let clock = FakeFanControllerClock()
+        let c = FanCurveController(helper: fake, store: store, clock: clock)
+        let fan = makeControllerFan(id: 0)
+        // Battery hot for only 10s — well under 30s dwell threshold.
+        c.tick(snapshot: makeBattSnapshot(fans: [fan], cpu: 50, batt: 41))
+        clock.advance(by: 10)
+        c.tick(snapshot: makeBattSnapshot(fans: [fan], cpu: 50, batt: 41))
+        // Median(50, 50) = 50 → curve = 3000. No floor yet.
+        XCTAssertEqual(fake.speedCalls.last?.rpm, 3000,
+                       "battery hot < dwell delay → no floor applied")
+        clearProfileStore()
+    }
+
+    func testBatterySafety_sustainedHot_appliesFloor() {
+        clearProfileStore()
+        let store = enabledStoreWithCustomProfile(smartLinearProfile)
+        let fake = FakeFanCurveHelper()
+        let clock = FakeFanControllerClock()
+        let c = FanCurveController(helper: fake, store: store, clock: clock)
+        let fan = makeControllerFan(id: 0)
+        // First tick records batteryHotSince but doesn't apply floor.
+        c.tick(snapshot: makeBattSnapshot(fans: [fan], cpu: 50, batt: 41))
+        // Wait past 30s dwell, tick again — floor should now apply.
+        clock.advance(by: 35)
+        c.tick(snapshot: makeBattSnapshot(fans: [fan], cpu: 50, batt: 41))
+        // Curve(50)=3000, battery floor=2500 → max(3000, 2500) = 3000.
+        // Make sure floor doesn't lower a hotter curve target.
+        XCTAssertEqual(fake.speedCalls.last?.rpm, 3000,
+                       "floor must not lower a higher curve target")
+        // Now drop CPU to a temp whose curve target is below the floor.
+        // CPU at 35 → curve = 1000 + 5*100 = 500 clamped to fan.minSpeed=1000.
+        clock.advance(by: 5)
+        c.tick(snapshot: makeBattSnapshot(fans: [fan], cpu: 35, batt: 41))
+        // Smoothed temp drifts, but battery still hot ≥30s → floor 2500 wins.
+        XCTAssertGreaterThanOrEqual(fake.speedCalls.last?.rpm ?? 0, 2500,
+                       "sustained battery heat must lift target to ≥2500 RPM")
+        clearProfileStore()
+    }
+
+    func testBatterySafety_dropsResetCounter() {
+        clearProfileStore()
+        let store = enabledStoreWithCustomProfile(smartLinearProfile)
+        let fake = FakeFanCurveHelper()
+        let clock = FakeFanControllerClock()
+        let c = FanCurveController(helper: fake, store: store, clock: clock)
+        let fan = makeControllerFan(id: 0)
+        // Get into the "floor active" state.
+        c.tick(snapshot: makeBattSnapshot(fans: [fan], cpu: 35, batt: 41))
+        clock.advance(by: 35)
+        c.tick(snapshot: makeBattSnapshot(fans: [fan], cpu: 35, batt: 41))
+        XCTAssertGreaterThanOrEqual(fake.speedCalls.last?.rpm ?? 0, 2500,
+                       "precondition: floor active after sustained heat")
+        // Battery drops below threshold → counter clears.
+        clock.advance(by: 5)
+        c.tick(snapshot: makeBattSnapshot(fans: [fan], cpu: 35, batt: 30))
+        // Battery rises again — must wait another 30s before floor re-applies.
+        clock.advance(by: 5)
+        c.tick(snapshot: makeBattSnapshot(fans: [fan], cpu: 35, batt: 41))
+        clock.advance(by: 10)
+        c.tick(snapshot: makeBattSnapshot(fans: [fan], cpu: 35, batt: 41))
+        // 10s after re-entering hot state < 30s dwell → no floor.
+        // CPU at 35 → curve = 1000 + 5*100 = 1500 (above fan.minSpeed=1000).
+        XCTAssertLessThan(fake.speedCalls.last?.rpm ?? 9999, 2500,
+                       "drop below threshold must restart the dwell timer")
         clearProfileStore()
     }
 }

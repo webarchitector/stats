@@ -1002,21 +1002,16 @@ private class ModeButtons: NSStackView {
         self.manualBtn.target = self
         self.manualBtn.state = mode == .forced ? .on : .off
 
-        // When Fan Curves are enabled, replace the Automatic toggle with a
-        // profile picker. The active profile *is* the Automatic source.
-        let curvesEnabled = ProfileStore.shared.enabled
-        if curvesEnabled {
-            let popup = NSPopUpButton()
-            popup.pullsDown = false
-            popup.translatesAutoresizingMaskIntoConstraints = false
-            popup.target = self
-            popup.action = #selector(self.curveProfileSelected(_:))
-            self.profilePopup = popup
-            self.reloadProfilePopup()
-            modes.addArrangedSubview(popup)
-        } else {
-            modes.addArrangedSubview(self.autoBtn)
-        }
+        // The active profile picker replaces the "Automatic" toggle —
+        // Apple Auto built-in profile is the equivalent of plain firmware auto.
+        let popup = NSPopUpButton()
+        popup.pullsDown = false
+        popup.translatesAutoresizingMaskIntoConstraints = false
+        popup.target = self
+        popup.action = #selector(self.curveProfileSelected(_:))
+        self.profilePopup = popup
+        self.reloadProfilePopup()
+        modes.addArrangedSubview(popup)
         modes.addArrangedSubview(self.manualBtn)
         
         self.offBtn.setButtonType(.toggle)

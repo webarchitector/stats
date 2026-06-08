@@ -93,7 +93,6 @@ public final class FanCurveController {
 
     public func tick(snapshot: Sensors_List?) {
         guard !isAsleep,
-              store.enabled,
               helper.isActive(),
               let snapshot = snapshot else { return }
 

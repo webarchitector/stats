@@ -19,7 +19,6 @@ internal class Settings: NSStackView, Settings_v {
     private var fansSyncState: Bool = false
     private var unknownSensorsState: Bool = false
     private var fanValueState: FanValue = .percentage
-    private var fanCtlEnabledState: Bool = false
     private var fanCurveContainer: NSStackView?
     private var profilePopup: NSPopUpButton?
     private var pointsTable: NSTableView?
@@ -59,7 +58,6 @@ internal class Settings: NSStackView, Settings_v {
         self.unknownSensorsState = Store.shared.bool(key: "\(self.title)_unknown", defaultValue: self.unknownSensorsState)
         self.fanValueState = FanValue(rawValue: Store.shared.string(key: "\(self.title)_fanValue", defaultValue: self.fanValueState.rawValue)) ?? .percentage
         self.selectedSensor = Store.shared.string(key: "\(self.title)_sensor", defaultValue: self.selectedSensor)
-        self.fanCtlEnabledState = ProfileStore.shared.enabled
         
         self.addArrangedSubview(PreferencesSection([
             PreferencesRow(localizedString("Update interval"), component: selectView(
@@ -106,17 +104,11 @@ internal class Settings: NSStackView, Settings_v {
         self.sensorsPrefs = sensorsPrefs
         self.addArrangedSubview(sensorsPrefs)
 
-        self.addArrangedSubview(PreferencesSection([
-            PreferencesRow(localizedString("Fan curves"), component: switchView(
-                action: #selector(self.toggleFanCtlEnabled),
-                state: self.fanCtlEnabledState
-            ))
-        ]))
-
+        // Fan curves are always enabled. Activate Apple Auto profile to defer
+        // to firmware; pick any other profile to take over.
         let curveContainer = NSStackView()
         curveContainer.orientation = .vertical
         curveContainer.spacing = Constants.Settings.margin
-        curveContainer.isHidden = !self.fanCtlEnabledState
         self.fanCurveContainer = curveContainer
         self.addArrangedSubview(curveContainer)
 
@@ -340,14 +332,6 @@ internal class Settings: NSStackView, Settings_v {
         self.selectedSensor = id
         Store.shared.set(key: "\(self.title)_sensor", value: self.selectedSensor)
         self.selectedHandler(self.selectedSensor)
-    }
-
-    @objc private func toggleFanCtlEnabled(_ sender: NSControl) {
-        let state = controlState(sender)
-        self.fanCtlEnabledState = state
-        ProfileStore.shared.enabled = state
-        self.fanCurveContainer?.isHidden = !state
-        NotificationCenter.default.post(name: .fanControlEnabledChanged, object: nil)
     }
 
     /// Called only after profile mutations (duplicate/delete) — no longer rebuilds

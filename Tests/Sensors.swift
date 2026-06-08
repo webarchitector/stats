@@ -456,20 +456,16 @@ final class SensorsTests: XCTestCase {
         clearProfileStore()
     }
 
-    func testProfileStore_enabled_falseByDefault() {
-        clearProfileStore()
-        let store = ProfileStore()
-        XCTAssertFalse(store.enabled)
-        clearProfileStore()
-    }
+    // `enabled` is always true now (master toggle removed). Apple Auto profile
+    // serves as the "off" semantic. The previous enabled-roundtrip tests were
+    // dropped because the property is no-op.
 
-    func testProfileStore_enabled_roundtrip() {
+    func testProfileStore_enabled_alwaysTrue() {
         clearProfileStore()
         let store = ProfileStore()
-        store.enabled = true
         XCTAssertTrue(store.enabled)
         store.enabled = false
-        XCTAssertFalse(store.enabled)
+        XCTAssertTrue(store.enabled, "enabled setter is intentionally a no-op")
         clearProfileStore()
     }
 
@@ -795,7 +791,7 @@ final class SensorsTests: XCTestCase {
         clearProfileStore()
     }
 
-    func testController_storeDisabled_relinquishesIfPreviouslyManaged() {
+    func testController_shutdownReleasesManagedFans() {
         clearProfileStore()
         let active = FanProfile(name: "Linear",
             drivers: [DriverSensor(key: "TC0D")],
@@ -807,64 +803,11 @@ final class SensorsTests: XCTestCase {
         c.tick(snapshot: makeControllerSnapshot(
             fans: [makeControllerFan(id: 0)], temps: [("TC0D", 60)]))
         XCTAssertTrue(fake.modeCalls.contains(.init(id: 0, mode: FanMode.forced.rawValue)))
-        // Disable: tick alone bails early without relinquishing
-        store.enabled = false
         fake.reset()
-        c.tick(snapshot: makeControllerSnapshot(
-            fans: [makeControllerFan(id: 0)], temps: [("TC0D", 60)]))
-        XCTAssertEqual(fake.modeCalls.count, 0, "tick should bail when disabled")
-        // Explicit shutdown releases the fans:
+        // Explicit shutdown (e.g., Sensors.willTerminate) releases the fans.
         c.shutdown()
         XCTAssertEqual(fake.modeCalls,
             [.init(id: 0, mode: FanMode.automatic.rawValue)])
-        clearProfileStore()
-    }
-
-    func testController_fanControlEnabledChangedToOff_relinquishesImmediately() {
-        clearProfileStore()
-        let active = FanProfile(name: "Linear",
-            drivers: [DriverSensor(key: "TC0D")],
-            points: [CurvePoint(tempC: 30, rpm: 1000), CurvePoint(tempC: 80, rpm: 6000)],
-            fanOffsetRPM: 0)
-        let store = enabledStoreWithCustomProfile(active)
-        let fake = FakeFanCurveHelper()
-        let c = FanCurveController(helper: fake, store: store)
-        c.tick(snapshot: makeControllerSnapshot(
-            fans: [makeControllerFan(id: 0)], temps: [("TC0D", 60)]))
-        XCTAssertTrue(fake.modeCalls.contains(.init(id: 0, mode: FanMode.forced.rawValue)))
-        fake.reset()
-        // Disable, then post the notification — observer should relinquish without waiting for a tick.
-        store.enabled = false
-        let exp = expectation(description: "observer ran")
-        NotificationCenter.default.post(name: .fanControlEnabledChanged, object: nil)
-        DispatchQueue.main.async { exp.fulfill() }
-        wait(for: [exp], timeout: 1.0)
-        XCTAssertEqual(fake.modeCalls,
-            [.init(id: 0, mode: FanMode.automatic.rawValue)],
-            "toggling fan control off should release managed fans immediately")
-        _ = c // keep alive
-        clearProfileStore()
-    }
-
-    func testController_fanControlEnabledChangedToOn_doesNothing() {
-        clearProfileStore()
-        let active = FanProfile(name: "Linear",
-            drivers: [DriverSensor(key: "TC0D")],
-            points: [CurvePoint(tempC: 30, rpm: 1000), CurvePoint(tempC: 80, rpm: 6000)],
-            fanOffsetRPM: 0)
-        let store = enabledStoreWithCustomProfile(active)
-        store.enabled = false
-        let fake = FakeFanCurveHelper()
-        let c = FanCurveController(helper: fake, store: store)
-        // Flip on, post notification: observer should NOT apply anything (no snapshot yet).
-        store.enabled = true
-        let exp = expectation(description: "observer ran")
-        NotificationCenter.default.post(name: .fanControlEnabledChanged, object: nil)
-        DispatchQueue.main.async { exp.fulfill() }
-        wait(for: [exp], timeout: 1.0)
-        XCTAssertEqual(fake.modeCalls.count, 0)
-        XCTAssertEqual(fake.speedCalls.count, 0)
-        _ = c // keep alive
         clearProfileStore()
     }
 

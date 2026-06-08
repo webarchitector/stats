@@ -38,9 +38,13 @@ public final class ProfileStore {
         }
     }
 
+    /// Fan curves are always active. The "disable" semantic is achieved by
+    /// activating the built-in "Apple Auto" profile (empty points → controller
+    /// relinquishes managed fans back to firmware automatic mode).
+    /// Property kept as a settable noop for backward compat with tests.
     public var enabled: Bool {
-        get { Store.shared.bool(key: enabledKey, defaultValue: false) }
-        set { Store.shared.set(key: enabledKey, value: newValue) }
+        get { true }
+        set { _ = newValue }
     }
 
     public func activeProfile() -> FanProfile? {

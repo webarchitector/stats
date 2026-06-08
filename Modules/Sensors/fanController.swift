@@ -82,8 +82,12 @@ public final class FanCurveController {
     private static let batterySafetyTempC: Double = 40.0
     private static let batterySafetyDelaySeconds: TimeInterval = 30.0
     private static let batterySafetyFloorRPM: Int = 2500
+    // Sensor KEYS (not display names) that report battery temperature.
+    // Source: Modules/Sensors/values.swift sensor list. Intel: TB0T/TB1T/TB2T;
+    // Apple Silicon HID exposes "gas gauge battery". Display-name strings like
+    // "Battery 1"/"Battery 2" are NOT keys — would never match a snapshot.
     private static let batteryKeys: Set<String> = [
-        "TB1T", "TB2T", "Battery 1", "Battery 2", "Battery", "gas gauge battery"
+        "TB0T", "TB1T", "TB2T", "gas gauge battery"
     ]
 
     /// All mutable state above is guarded by this lock. tick() runs on the
@@ -113,6 +117,12 @@ public final class FanCurveController {
             forName: .fanProfileChanged, object: nil, queue: .main) { [weak self] _ in
             guard let self = self else { return }
             self.stateLock.lock()
+            // Force next tick to re-assert setFanMode(.forced) for each fan.
+            // Without clearing managedFans, the next applyIfNeeded skips the
+            // mode write and leaves SMC briefly in whatever mode the user's
+            // callback (.automatic) just set — out of sync until next speed
+            // write self-heals it via SMC's unlockFanControl path.
+            self.managedFans.removeAll()
             self.lastApplied.removeAll()
             self.lastTempForHyst.removeAll()
             self.tempSamples.removeAll()
@@ -151,15 +161,39 @@ public final class FanCurveController {
         stateLock.lock()
         defer { stateLock.unlock() }
 
-        guard !isAsleep,
-              helper.isActive(),
-              let snapshot = snapshot else { return }
+        guard !isAsleep, let snapshot = snapshot else { return }
+
+        // If the helper went away mid-session (user uninstalled it, the
+        // launchd daemon crashed, file deleted), our cached managedFans set
+        // is stale — any reinstall would think fans are already managed and
+        // skip the setFanMode(.forced) re-assertion. Drop our state so the
+        // next valid tick rebuilds cleanly.
+        guard helper.isActive() else {
+            if !managedFans.isEmpty {
+                managedFans.removeAll()
+                lastApplied.removeAll()
+                lastTempForHyst.removeAll()
+                tempSamples.removeAll()
+                batteryHotSince = nil
+            }
+            return
+        }
 
         let fans = snapshot.sensors.compactMap { $0 as? Fan }
         if !didBootstrap, !fans.isEmpty {
             let maxRpm = Int(fans.map(\.maxSpeed).max() ?? 7000)
+            let wasEmpty = store.loadProfiles().isEmpty
             store.bootstrapIfNeeded(fanCount: fans.count, defaultMaxRPM: maxRpm)
             didBootstrap = true
+            if wasEmpty {
+                // Bootstrap just populated 6 profiles + activated Aggressive.
+                // Tell observers (popup picker, settings editor) to reload —
+                // otherwise the picker stays empty until something else
+                // triggers a notification.
+                DispatchQueue.main.async {
+                    NotificationCenter.default.post(name: .fanProfileChanged, object: nil)
+                }
+            }
         }
 
         guard let profile = store.activeProfile(),

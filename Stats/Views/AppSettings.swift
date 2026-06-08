@@ -35,17 +35,6 @@ class ApplicationSettings: NSStackView {
         set { Store.shared.set(key: "CombinedModules_popup", value: newValue) }
     }
     
-    private var systemWidgetsUpdatesState: Bool {
-        get {
-            let userDefaults = UserDefaults(suiteName: "\(Bundle.main.object(forInfoDictionaryKey: "TeamId") as! String).eu.exelban.Stats.widgets")
-            return userDefaults?.bool(forKey: "systemWidgetsUpdates_state") ?? false
-        }
-        set {
-            let userDefaults = UserDefaults(suiteName: "\(Bundle.main.object(forInfoDictionaryKey: "TeamId") as! String).eu.exelban.Stats.widgets")
-            userDefaults?.set(newValue, forKey: "systemWidgetsUpdates_state")
-        }
-    }
-    
     private var startAtLoginBtn: NSSwitch?
 
     private var combinedModulesView: PreferencesSection?
@@ -93,13 +82,6 @@ class ApplicationSettings: NSStackView {
                 state: Store.shared.bool(key: "dockIcon", defaultValue: false)
             )),
             PreferencesRow(localizedString("Start at login"), component: self.startAtLoginBtn!)
-        ]))
-        
-        scrollView.stackView.addArrangedSubview(PreferencesSection([
-            PreferencesRow(localizedString("macOS widgets"), component: switchView(
-                action: #selector(self.toggleSystemWidgetsUpdatesState),
-                state: self.systemWidgetsUpdatesState
-            ))
         ]))
         
         self.combinedModulesView = PreferencesSection([
@@ -373,10 +355,6 @@ class ApplicationSettings: NSStackView {
         }
     }
     
-    @objc private func toggleSystemWidgetsUpdatesState(_ sender: NSButton) {
-        self.systemWidgetsUpdatesState = sender.state == NSControl.StateValue.on
-    }
-
     @objc private func toggleModule(_ sender: NSSwitch) {
         guard let name = sender.identifier?.rawValue,
               let module = modules.first(where: { $0.name == name }) else { return }

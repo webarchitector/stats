@@ -108,6 +108,15 @@ public class Sensors: Module {
         }
     }
 
+    /// Module.disable() (called when the user toggles Sensors off in Settings)
+    /// only stops the readers — it doesn't fire willTerminate, so without this
+    /// override the fanController stays in .forced mode at last-applied RPM.
+    /// Release managed fans before the readers stop ticking.
+    public override func disable() {
+        self.fanController?.shutdown()
+        super.disable()
+    }
+
     /// Crash recovery: any fan whose stored customMode is .curve but where Stats is no
     /// longer enabled or has no active profile gets reset to automatic to avoid stuck
     /// forced RPM on the hardware.

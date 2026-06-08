@@ -954,6 +954,91 @@ final class SensorsTests: XCTestCase {
         clearProfileStore()
     }
 
+    // MARK: - Audit fixes (managed-fans cleanup, user takeover, helper drop)
+
+    func testController_userTakeoverViaCustomMode_yieldsFan() {
+        clearProfileStore()
+        let p = FanProfile(name: "P",
+            drivers: [DriverSensor(key: "TC0D")],
+            points: [CurvePoint(tempC: 30, rpm: 1000), CurvePoint(tempC: 80, rpm: 6000)],
+            fanOffsetRPM: 0)
+        let store = enabledStoreWithCustomProfile(p)
+        let fake = FakeFanCurveHelper()
+        let c = FanCurveController(helper: fake, store: store)
+        // First tick: controller manages fan 0.
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0)], temps: [("TC0D", 60)]))
+        XCTAssertTrue(fake.modeCalls.contains(.init(id: 0, mode: FanMode.forced.rawValue)))
+        XCTAssertEqual(fake.speedCalls.count, 1)
+        // User picks Manual/Off/Max → callback writes customMode = .forced.
+        var fan = makeControllerFan(id: 0)
+        fan.customMode = .forced
+        fake.reset()
+        c.tick(snapshot: makeControllerSnapshot(fans: [fan], temps: [("TC0D", 60)]))
+        // Controller yields: no SMC writes for user-managed fan.
+        XCTAssertEqual(fake.modeCalls.count, 0, "user takeover should suppress controller writes")
+        XCTAssertEqual(fake.speedCalls.count, 0)
+        fan.customMode = nil
+        clearProfileStore()
+    }
+
+    func testController_helperGoesAway_clearsManagedState() {
+        clearProfileStore()
+        let p = FanProfile(name: "P",
+            drivers: [DriverSensor(key: "TC0D")],
+            points: [CurvePoint(tempC: 30, rpm: 1000), CurvePoint(tempC: 80, rpm: 6000)],
+            fanOffsetRPM: 0)
+        let store = enabledStoreWithCustomProfile(p)
+        let fake = FakeFanCurveHelper()
+        let c = FanCurveController(helper: fake, store: store)
+        // Manage fan 0.
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0)], temps: [("TC0D", 60)]))
+        XCTAssertTrue(fake.modeCalls.contains(.init(id: 0, mode: FanMode.forced.rawValue)))
+        // Helper disappears mid-session.
+        fake.isActiveValue = false
+        fake.reset()
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0)], temps: [("TC0D", 60)]))
+        XCTAssertEqual(fake.modeCalls.count, 0, "no helper → no SMC writes")
+        // Helper comes back. Without the clear-on-isActive-false fix the
+        // controller would think fan is already managed and skip setFanMode.
+        fake.isActiveValue = true
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0)], temps: [("TC0D", 60)]))
+        XCTAssertTrue(fake.modeCalls.contains(.init(id: 0, mode: FanMode.forced.rawValue)),
+            "helper-back should re-assert forced mode")
+        clearProfileStore()
+    }
+
+    func testController_profileChangedNotification_clearsManagedFans() {
+        clearProfileStore()
+        let p = FanProfile(name: "P",
+            drivers: [DriverSensor(key: "TC0D")],
+            points: [CurvePoint(tempC: 30, rpm: 1000), CurvePoint(tempC: 80, rpm: 6000)],
+            fanOffsetRPM: 0)
+        let store = enabledStoreWithCustomProfile(p)
+        let fake = FakeFanCurveHelper()
+        let c = FanCurveController(helper: fake, store: store)
+        // Manage fan 0.
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0)], temps: [("TC0D", 60)]))
+        XCTAssertTrue(fake.modeCalls.contains(.init(id: 0, mode: FanMode.forced.rawValue)))
+        // Profile change notification — observer should drop managedFans.
+        fake.reset()
+        let exp = expectation(description: "observer drained")
+        NotificationCenter.default.post(name: .fanProfileChanged, object: nil)
+        DispatchQueue.main.async { exp.fulfill() }
+        wait(for: [exp], timeout: 1.0)
+        // Next tick re-asserts setFanMode because managedFans was cleared.
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0)], temps: [("TC0D", 60)]))
+        XCTAssertTrue(fake.modeCalls.contains(.init(id: 0, mode: FanMode.forced.rawValue)),
+            "fanProfileChanged should clear managedFans so next tick re-asserts forced mode")
+        _ = c
+        clearProfileStore()
+    }
+
     func testController_profileChangedNotification_resetsLastApplied() {
         clearProfileStore()
         let p1 = FanProfile(name: "P1",

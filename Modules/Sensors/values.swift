@@ -348,6 +348,35 @@ public struct DriverSensor: Codable, Equatable, Hashable {
     }
 }
 
+public struct FanProfile: Codable, Equatable, Hashable, Identifiable {
+    public var id: UUID
+    public var name: String
+    public var isBuiltIn: Bool
+    public var drivers: [DriverSensor]
+    public var points: [CurvePoint]
+    public var fanOffsetRPM: Int
+    public var hysteresisC: Double
+    public var deltaRpmThreshold: Int
+
+    public init(id: UUID = UUID(),
+                name: String,
+                isBuiltIn: Bool = false,
+                drivers: [DriverSensor],
+                points: [CurvePoint],
+                fanOffsetRPM: Int = 50,
+                hysteresisC: Double = 2.0,
+                deltaRpmThreshold: Int = 150) {
+        self.id = id
+        self.name = name
+        self.isBuiltIn = isBuiltIn
+        self.drivers = drivers
+        self.points = points
+        self.fanOffsetRPM = fanOffsetRPM
+        self.hysteresisC = hysteresisC
+        self.deltaRpmThreshold = deltaRpmThreshold
+    }
+}
+
 // List of keys: https://github.com/acidanthera/VirtualSMC/blob/master/Docs/SMCSensorKeys.txt
 internal let SensorsList: [Sensor] = [
     // Temperature

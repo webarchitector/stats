@@ -196,4 +196,53 @@ final class SensorsTests: XCTestCase {
         let decoded = try JSONDecoder().decode(DriverSensor.self, from: data)
         XCTAssertEqual(decoded, d)
     }
+
+    // MARK: - FanProfile
+
+    private func makeAggressive() -> FanProfile {
+        FanProfile(
+            name: "Aggressive",
+            drivers: [DriverSensor(key: "TC0D"), DriverSensor(key: "TG0D")],
+            points: [
+                CurvePoint(tempC: 35, rpm: 1300),
+                CurvePoint(tempC: 78, rpm: 7000)
+            ])
+    }
+
+    func testFanProfile_hasUniqueIDByDefault() {
+        let a = makeAggressive()
+        let b = makeAggressive()
+        XCTAssertNotEqual(a.id, b.id)
+    }
+
+    func testFanProfile_defaults() {
+        let p = makeAggressive()
+        XCTAssertFalse(p.isBuiltIn)
+        XCTAssertEqual(p.fanOffsetRPM, 50)
+        XCTAssertEqual(p.hysteresisC, 2.0, accuracy: 0.001)
+        XCTAssertEqual(p.deltaRpmThreshold, 150)
+    }
+
+    func testFanProfile_codableRoundtrip() throws {
+        var p = makeAggressive()
+        p.isBuiltIn = true
+        p.fanOffsetRPM = 75
+        let data = try JSONEncoder().encode(p)
+        let decoded = try JSONDecoder().decode(FanProfile.self, from: data)
+        XCTAssertEqual(decoded.id, p.id)
+        XCTAssertEqual(decoded.name, p.name)
+        XCTAssertEqual(decoded.isBuiltIn, true)
+        XCTAssertEqual(decoded.fanOffsetRPM, 75)
+        XCTAssertEqual(decoded.drivers, p.drivers)
+        XCTAssertEqual(decoded.points, p.points)
+    }
+
+    func testFanProfile_arrayCodableRoundtrip() throws {
+        let list = [makeAggressive(), makeAggressive()]
+        let data = try JSONEncoder().encode(list)
+        let decoded = try JSONDecoder().decode([FanProfile].self, from: data)
+        XCTAssertEqual(decoded.count, 2)
+        XCTAssertEqual(decoded[0].id, list[0].id)
+        XCTAssertEqual(decoded[1].id, list[1].id)
+    }
 }

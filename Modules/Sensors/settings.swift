@@ -29,6 +29,7 @@ internal class Settings: NSStackView, Settings_v {
     private var offsetField: NSTextField?
     private var hysteresisField: NSTextField?
     private var thresholdField: NSTextField?
+    private var graphView: CurveGraphView?
 
     public var callback: (() -> Void) = {}
     public var HIDcallback: (() -> Void) = {}
@@ -154,6 +155,12 @@ internal class Settings: NSStackView, Settings_v {
         scroll.heightAnchor.constraint(equalToConstant: 180).isActive = true
         self.pointsTable = table
         curveContainer.addArrangedSubview(scroll)
+
+        let graph = CurveGraphView()
+        graph.translatesAutoresizingMaskIntoConstraints = false
+        graph.heightAnchor.constraint(equalToConstant: 100).isActive = true
+        self.graphView = graph
+        curveContainer.addArrangedSubview(graph)
 
         let addBtn = NSButton(title: "+", target: self, action: #selector(self.addPoint))
         let removeBtn = NSButton(title: "−", target: self, action: #selector(self.removePoint))
@@ -366,6 +373,9 @@ internal class Settings: NSStackView, Settings_v {
         self.pointsDataSource.points = pts
         self.pointsTable?.reloadData()
         self.refreshDriversChecklist()
+        self.graphView?.points = pts
+        let maxRpm = Int(self.list.compactMap({ $0 as? Fan }).map(\.maxSpeed).max() ?? 7000)
+        self.graphView?.maxRPM = maxRpm
     }
 
     private func refreshDriversChecklist() {

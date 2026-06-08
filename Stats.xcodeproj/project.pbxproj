@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		2EA5A221E5B4339C874D8A72 /* curveGraph.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2E0CF1B7DCD5E022571C876 /* curveGraph.swift */; };
 		421C47D22F2AD502B353402F /* Sensors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58091506F3B289B231B39FE3 /* Sensors.swift */; };
 		479B2E3E389D636431E0E9C5 /* profileStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3322981FB4165F78DFD82B5 /* profileStore.swift */; };
 		5C038CF62D86EE8A00516809 /* SystemStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C038CF52D86EE8700516809 /* SystemStats.swift */; };
@@ -757,6 +758,7 @@
 		9AF9EE12246492E8005D2270 /* config.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = config.plist; sourceTree = "<group>"; };
 		9AF9EE192464A7B3005D2270 /* config.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = config.plist; sourceTree = "<group>"; };
 		ABF31774E50A0093CC9A7000 /* fanController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = fanController.swift; path = Modules/Sensors/fanController.swift; sourceTree = SOURCE_ROOT; };
+		B2E0CF1B7DCD5E022571C876 /* curveGraph.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = curveGraph.swift; path = Modules/Sensors/curveGraph.swift; sourceTree = SOURCE_ROOT; };
 		B8F0D4F1259D19B100AAFAAF /* pt-PT */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "pt-PT"; path = "pt-PT.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		BB9E59E725BB5F5E004AED95 /* hu */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = hu; path = hu.lproj/Localizable.strings; sourceTree = "<group>"; };
 		C904AECF255939DB004A9EBC /* it */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = it; path = it.lproj/Localizable.strings; sourceTree = "<group>"; };
@@ -1353,6 +1355,7 @@
 				5953BDA1E924935D3DB7E8B7 /* fanCurve.swift */,
 				E3322981FB4165F78DFD82B5 /* profileStore.swift */,
 				ABF31774E50A0093CC9A7000 /* fanController.swift */,
+				B2E0CF1B7DCD5E022571C876 /* curveGraph.swift */,
 			);
 			path = Sensors;
 			sourceTree = "<group>";
@@ -2359,6 +2362,7 @@
 				B85DB7409048525C8583C63B /* fanCurve.swift in Sources */,
 				479B2E3E389D636431E0E9C5 /* profileStore.swift in Sources */,
 				D616FB5CDDF9B069C77C5D4A /* fanController.swift in Sources */,
+				2EA5A221E5B4339C874D8A72 /* curveGraph.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

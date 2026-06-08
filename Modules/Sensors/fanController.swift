@@ -64,6 +64,13 @@ public final class FanCurveController {
             self?.lastApplied.removeAll()
             self?.lastTempForHyst.removeAll()
         }))
+        observers.append((defaultNC, defaultNC.addObserver(
+            forName: .fanControlEnabledChanged, object: nil, queue: .main) { [weak self] _ in
+            guard let self else { return }
+            if !self.store.enabled {
+                self.relinquish()
+            }
+        }))
     }
 
     deinit {

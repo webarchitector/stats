@@ -454,8 +454,6 @@ internal class FanView: NSStackView {
     private var helperView: NSView? = nil
     private var controlView: NSView? = nil
     private var buttonsView: NSView? = nil
-    private var profileView: NSView? = nil
-    private var profilePopup: NSPopUpButton? = nil
     
     private var valueField: NSTextField? = nil
     private var sliderValueField: NSTextField? = nil
@@ -507,7 +505,6 @@ internal class FanView: NSStackView {
         self.helperView = self.noHelper()
         self.controlView = self.control()
         self.buttonsView = self.mode()
-        self.profileView = self.curveProfilePicker()
         
         self.orientation = .vertical
         self.alignment = .centerX
@@ -525,6 +522,8 @@ internal class FanView: NSStackView {
         NotificationCenter.default.addObserver(self, selector: #selector(self.syncFanSpeed), name: .syncFansControl, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(self.changeHelperState), name: .fanHelperState, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(self.controlCallback), name: .toggleFanControl, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(self.reloadCurveProfilePopupNotification), name: .fanProfileChanged, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(self.fanControlEnabledChangedNotification), name: .fanControlEnabledChanged, object: nil)
         
         if let fanMode = self.fan.customMode, self.speedState && fanMode != .automatic && !fanMode.isStatsControlled {
             SMCHelper.shared.setFanMode(fan.id, mode: fanMode.rawValue)
@@ -613,52 +612,16 @@ internal class FanView: NSStackView {
         return view
     }
     
-    private func curveProfilePicker() -> NSView {
-        let view = NSView(frame: NSRect(x: 0, y: 0, width: self.frame.width, height: 26))
-        view.heightAnchor.constraint(equalToConstant: 26).isActive = true
-
-        let popup = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: self.frame.width, height: 22))
-        popup.target = self
-        popup.action = #selector(self.curveProfileChanged(_:))
-        self.profilePopup = popup
-        self.reloadCurveProfilePopup()
-
-        view.addSubview(popup)
-        NotificationCenter.default.addObserver(self,
-            selector: #selector(self.reloadCurveProfilePopupNotification),
-            name: .fanProfileChanged, object: nil)
-        NotificationCenter.default.addObserver(self,
-            selector: #selector(self.fanControlEnabledChangedNotification),
-            name: .fanControlEnabledChanged, object: nil)
-        return view
-    }
-
-    private func reloadCurveProfilePopup() {
-        guard let popup = self.profilePopup else { return }
-        popup.removeAllItems()
-        let profiles = ProfileStore.shared.loadProfiles()
-        for p in profiles {
-            popup.addItem(withTitle: p.name)
-            popup.lastItem?.representedObject = p.id
-        }
-        if let activeID = ProfileStore.shared.activeProfileID,
-           let idx = profiles.firstIndex(where: { $0.id == activeID }) {
-            popup.selectItem(at: idx)
-        }
-    }
-
     @objc private func reloadCurveProfilePopupNotification() {
-        self.reloadCurveProfilePopup()
+        self.modeButtons?.reloadProfilePopup()
     }
 
     @objc private func fanControlEnabledChangedNotification() {
+        // Curve toggle on/off — rebuild mode buttons so the profile-picker slot
+        // appears/disappears in place of "Automatic".
+        if let old = self.buttonsView { old.removeFromSuperview() }
+        self.buttonsView = self.mode()
         self.setupControls()
-    }
-
-    @objc private func curveProfileChanged(_ sender: NSPopUpButton) {
-        guard let id = sender.selectedItem?.representedObject as? UUID else { return }
-        ProfileStore.shared.activeProfileID = id
-        NotificationCenter.default.post(name: .fanProfileChanged, object: nil)
     }
 
     private func mode() -> NSView {
@@ -966,22 +929,14 @@ internal class FanView: NSStackView {
     
     private func setupControls(_ isInstalled: Bool? = nil) {
         let helperState = isInstalled ?? SMCHelper.shared.isInstalled
-        let curvesEnabled = ProfileStore.shared.enabled
 
         if !self.controlState {
             self.helperView?.removeFromSuperview()
             self.controlView?.removeFromSuperview()
             self.buttonsView?.removeFromSuperview()
-            self.profileView?.removeFromSuperview()
         } else {
             if helperState {
                 self.helperView?.removeFromSuperview()
-                if curvesEnabled, let v = self.profileView {
-                    self.reloadCurveProfilePopup()
-                    self.addArrangedSubview(v)
-                } else {
-                    self.profileView?.removeFromSuperview()
-                }
                 if self.fan.maxSpeed != self.fan.minSpeed, let v = self.buttonsView {
                     self.addArrangedSubview(v)
                 }
@@ -991,7 +946,6 @@ internal class FanView: NSStackView {
             } else {
                 self.buttonsView?.removeFromSuperview()
                 self.controlView?.removeFromSuperview()
-                self.profileView?.removeFromSuperview()
                 if let v = self.helperView {
                     self.addArrangedSubview(v)
                 }
@@ -1019,25 +973,26 @@ private class ModeButtons: NSStackView {
     public var callback: (FanMode) -> Void = {_ in }
     public var turbo: () -> Void = {}
     public var off: () -> Void = {}
-    
+
     private var fansSyncState: Bool {
         Store.shared.bool(key: "Sensors_fansSync", defaultValue: false)
     }
-    
+
     private var offBtn: NSButton
     private var autoBtn: NSButton = NSButton(title: localizedString("Automatic"), target: nil, action: #selector(autoMode))
     private var manualBtn: NSButton = NSButton(title: localizedString("Manual"), target: nil, action: #selector(manualMode))
     private var turboBtn: NSButton
-    
+    private var profilePopup: NSPopUpButton? = nil
+
     public init(frame: NSRect, mode: FanMode) {
         let turboIcon: NSImage = iconFromSymbol(name: "snowflake", scale: .large)
         let offIcon: NSImage = iconFromSymbol(name: "fanblades.slash", scale: .medium)
-        
+
         self.offBtn = NSButton(image: offIcon, target: nil, action: #selector(offMode))
         self.turboBtn = NSButton(image: turboIcon, target: nil, action: #selector(turboMode))
-        
+
         super.init(frame: frame)
-        
+
         self.orientation = .horizontal
         self.alignment = .centerY
         self.distribution = .fillProportionally
@@ -1046,23 +1001,36 @@ private class ModeButtons: NSStackView {
         self.layer?.cornerRadius = 3
         self.layer?.borderWidth = 1
         self.layer?.borderColor = NSColor.lightGray.cgColor
-        
+
         let modes: NSStackView = NSStackView(frame: NSRect(x: 0, y: 0, width: self.frame.width, height: self.frame.height))
         modes.orientation = .horizontal
         modes.alignment = .centerY
         modes.distribution = .fillEqually
-        
+
         self.autoBtn.setButtonType(.toggle)
         self.autoBtn.isBordered = false
         self.autoBtn.target = self
         self.autoBtn.state = mode.isAutomatic ? .on : .off
-        
+
         self.manualBtn.setButtonType(.toggle)
         self.manualBtn.isBordered = false
         self.manualBtn.target = self
         self.manualBtn.state = mode == .forced ? .on : .off
-        
-        modes.addArrangedSubview(self.autoBtn)
+
+        // When Fan Curves are enabled, replace the Automatic toggle with a
+        // profile picker. The active profile *is* the Automatic source.
+        let curvesEnabled = ProfileStore.shared.enabled
+        if curvesEnabled {
+            let popup = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 0, height: self.frame.height))
+            popup.isBordered = false
+            popup.target = self
+            popup.action = #selector(self.curveProfileSelected(_:))
+            self.profilePopup = popup
+            self.reloadProfilePopup()
+            modes.addArrangedSubview(popup)
+        } else {
+            modes.addArrangedSubview(self.autoBtn)
+        }
         modes.addArrangedSubview(self.manualBtn)
         
         self.offBtn.setButtonType(.toggle)
@@ -1217,5 +1185,25 @@ private class ModeButtons: NSStackView {
             self.turboBtn.state = .off
             self.callback(.forced)
         }
+    }
+
+    public func reloadProfilePopup() {
+        guard let popup = self.profilePopup else { return }
+        popup.removeAllItems()
+        let profiles = ProfileStore.shared.loadProfiles()
+        for p in profiles {
+            popup.addItem(withTitle: p.name)
+            popup.lastItem?.representedObject = p.id
+        }
+        if let activeID = ProfileStore.shared.activeProfileID,
+           let idx = profiles.firstIndex(where: { $0.id == activeID }) {
+            popup.selectItem(at: idx)
+        }
+    }
+
+    @objc private func curveProfileSelected(_ sender: NSPopUpButton) {
+        guard let id = sender.selectedItem?.representedObject as? UUID else { return }
+        ProfileStore.shared.activeProfileID = id
+        NotificationCenter.default.post(name: .fanProfileChanged, object: nil)
     }
 }

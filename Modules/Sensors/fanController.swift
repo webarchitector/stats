@@ -166,10 +166,19 @@ public final class FanCurveController {
 }
 
 /// Bridges the existing `Kit.SMCHelper` to the narrow `FanCurveHelper` protocol.
+///
+/// `isActive` checks for the privileged helper FILE on disk, NOT the XPC connection
+/// state. The connection is lazily established by SMCHelper on the first
+/// `setFanMode`/`setFanSpeed` call, so checking `SMCHelper.shared.isActive()` here
+/// would be a chicken-and-egg deadlock — the controller would never call the helper
+/// and the connection would never form.
 public final class SMCHelperAdapter: FanCurveHelper {
     public static let shared = SMCHelperAdapter()
+    private static let helperPath = "/Library/PrivilegedHelperTools/eu.exelban.Stats.SMC.Helper"
     public init() {}
-    public func isActive() -> Bool { SMCHelper.shared.isActive() }
+    public func isActive() -> Bool {
+        FileManager.default.fileExists(atPath: Self.helperPath)
+    }
     public func setFanMode(id: Int, mode: Int) {
         SMCHelper.shared.setFanMode(id, mode: mode)
     }

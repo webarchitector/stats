@@ -326,6 +326,28 @@ public struct Fan: Sensor_p, Codable {
     }
 }
 
+// MARK: - Fan Curve
+
+public struct CurvePoint: Codable, Equatable, Hashable {
+    public var tempC: Double
+    public var rpm: Int
+
+    public init(tempC: Double, rpm: Int) {
+        self.tempC = tempC
+        self.rpm = rpm
+    }
+}
+
+public struct DriverSensor: Codable, Equatable, Hashable {
+    public var key: String
+    public var weight: Double
+
+    public init(key: String, weight: Double = 1.0) {
+        self.key = key
+        self.weight = weight
+    }
+}
+
 // List of keys: https://github.com/acidanthera/VirtualSMC/blob/master/Docs/SMCSensorKeys.txt
 internal let SensorsList: [Sensor] = [
     // Temperature

@@ -164,4 +164,36 @@ final class SensorsTests: XCTestCase {
         XCTAssertNil(fan.customMode)
         clearStore(fanID: 98)
     }
+
+    // MARK: - CurvePoint
+
+    func testCurvePoint_codableRoundtrip() throws {
+        let pt = CurvePoint(tempC: 60.5, rpm: 3000)
+        let data = try JSONEncoder().encode(pt)
+        let decoded = try JSONDecoder().decode(CurvePoint.self, from: data)
+        XCTAssertEqual(decoded, pt)
+    }
+
+    func testCurvePoint_equality() {
+        XCTAssertEqual(CurvePoint(tempC: 60, rpm: 3000),
+                       CurvePoint(tempC: 60, rpm: 3000))
+        XCTAssertNotEqual(CurvePoint(tempC: 60, rpm: 3000),
+                          CurvePoint(tempC: 61, rpm: 3000))
+        XCTAssertNotEqual(CurvePoint(tempC: 60, rpm: 3000),
+                          CurvePoint(tempC: 60, rpm: 3001))
+    }
+
+    // MARK: - DriverSensor
+
+    func testDriverSensor_defaultWeightIsOne() {
+        let d = DriverSensor(key: "TC0D")
+        XCTAssertEqual(d.weight, 1.0)
+    }
+
+    func testDriverSensor_codableRoundtrip() throws {
+        let d = DriverSensor(key: "TG0D", weight: 0.5)
+        let data = try JSONEncoder().encode(d)
+        let decoded = try JSONDecoder().decode(DriverSensor.self, from: data)
+        XCTAssertEqual(decoded, d)
+    }
 }

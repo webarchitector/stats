@@ -19,13 +19,15 @@ internal class Settings: NSStackView, Settings_v {
     private var fansSyncState: Bool = false
     private var unknownSensorsState: Bool = false
     private var fanValueState: FanValue = .percentage
-    
+    private var fanCtlEnabledState: Bool = false
+    private var fanCurveContainer: NSStackView?
+
     public var callback: (() -> Void) = {}
     public var HIDcallback: (() -> Void) = {}
     public var unknownCallback: (() -> Void) = {}
     public var setInterval: ((_ value: Int) -> Void) = {_ in }
     public var selectedHandler: (String) -> Void = {_ in }
-    
+
     private let title: String
     private var list: [Sensor_p] = []
     private var sensorsPrefs: PreferencesSection?
@@ -46,6 +48,7 @@ internal class Settings: NSStackView, Settings_v {
         self.unknownSensorsState = Store.shared.bool(key: "\(self.title)_unknown", defaultValue: self.unknownSensorsState)
         self.fanValueState = FanValue(rawValue: Store.shared.string(key: "\(self.title)_fanValue", defaultValue: self.fanValueState.rawValue)) ?? .percentage
         self.selectedSensor = Store.shared.string(key: "\(self.title)_sensor", defaultValue: self.selectedSensor)
+        self.fanCtlEnabledState = ProfileStore.shared.enabled
         
         self.addArrangedSubview(PreferencesSection([
             PreferencesRow(localizedString("Update interval"), component: selectView(
@@ -91,6 +94,20 @@ internal class Settings: NSStackView, Settings_v {
         let sensorsPrefs = PreferencesSection(sensorsRows)
         self.sensorsPrefs = sensorsPrefs
         self.addArrangedSubview(sensorsPrefs)
+
+        self.addArrangedSubview(PreferencesSection([
+            PreferencesRow(localizedString("Fan curves"), component: switchView(
+                action: #selector(self.toggleFanCtlEnabled),
+                state: self.fanCtlEnabledState
+            ))
+        ]))
+
+        let curveContainer = NSStackView()
+        curveContainer.orientation = .vertical
+        curveContainer.spacing = Constants.Settings.margin
+        curveContainer.isHidden = !self.fanCtlEnabledState
+        self.fanCurveContainer = curveContainer
+        self.addArrangedSubview(curveContainer)
     }
     
     required init?(coder: NSCoder) {
@@ -204,5 +221,13 @@ internal class Settings: NSStackView, Settings_v {
         self.selectedSensor = id
         Store.shared.set(key: "\(self.title)_sensor", value: self.selectedSensor)
         self.selectedHandler(self.selectedSensor)
+    }
+
+    @objc private func toggleFanCtlEnabled(_ sender: NSControl) {
+        let state = controlState(sender)
+        self.fanCtlEnabledState = state
+        ProfileStore.shared.enabled = state
+        self.fanCurveContainer?.isHidden = !state
+        NotificationCenter.default.post(name: .fanControlEnabledChanged, object: nil)
     }
 }

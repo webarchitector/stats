@@ -538,4 +538,81 @@ final class SensorsTests: XCTestCase {
         fake.isActiveValue = false
         XCTAssertFalse(fake.isActive())
     }
+
+    // MARK: - Controller tick basics
+
+    private func makeControllerFan(id: Int, min: Double = 1000, max: Double = 7000,
+                                   value: Double = 1000) -> Fan {
+        Fan(id: id, key: "F\(id)Ac", name: "Fan \(id)",
+            minSpeed: min, maxSpeed: max, value: value, mode: .automatic)
+    }
+
+    private func makeControllerSnapshot(fans: [Fan], temps: [(String, Double)]) -> Sensors_List {
+        let list = Sensors_List()
+        list.sensors = temps.map { makeTempSensor(key: $0.0, value: $0.1) }
+                          + fans.map { $0 as Sensor_p }
+        return list
+    }
+
+    func testController_disabledStore_doesNothing() {
+        clearProfileStore()
+        let fake = FakeFanCurveHelper()
+        let c = FanCurveController(helper: fake, store: ProfileStore())
+        let snap = makeControllerSnapshot(fans: [makeControllerFan(id: 0)],
+                                          temps: [("TC0D", 70)])
+        c.tick(snapshot: snap)
+        XCTAssertEqual(fake.modeCalls.count, 0)
+        XCTAssertEqual(fake.speedCalls.count, 0)
+        clearProfileStore()
+    }
+
+    func testController_helperInactive_doesNothing() {
+        clearProfileStore()
+        let store = ProfileStore()
+        store.enabled = true
+        store.bootstrapIfNeeded(fanCount: 1, defaultMaxRPM: 7000)
+        let fake = FakeFanCurveHelper(); fake.isActiveValue = false
+        let c = FanCurveController(helper: fake, store: store)
+        let snap = makeControllerSnapshot(fans: [makeControllerFan(id: 0)],
+                                          temps: [("TC0D", 70)])
+        c.tick(snapshot: snap)
+        XCTAssertEqual(fake.modeCalls.count, 0)
+        XCTAssertEqual(fake.speedCalls.count, 0)
+        clearProfileStore()
+    }
+
+    func testController_enabledWithProfile_setsForcedAndApplies() {
+        clearProfileStore()
+        let store = ProfileStore()
+        store.enabled = true
+        store.bootstrapIfNeeded(fanCount: 1, defaultMaxRPM: 7000)
+        let fake = FakeFanCurveHelper()
+        let c = FanCurveController(helper: fake, store: store)
+        // Aggressive profile: at 65°C effective temp → 4200 RPM
+        let snap = makeControllerSnapshot(fans: [makeControllerFan(id: 0)],
+                                          temps: [("TC0D", 65), ("TG0D", 50)])
+        c.tick(snapshot: snap)
+        // First apply should set mode to .forced exactly once
+        XCTAssertEqual(fake.modeCalls, [.init(id: 0, mode: FanMode.forced.rawValue)])
+        // Speed = 4200 (effective temp = max(65, 50) = 65)
+        XCTAssertEqual(fake.speedCalls.count, 1)
+        XCTAssertEqual(fake.speedCalls[0].id, 0)
+        XCTAssertEqual(fake.speedCalls[0].rpm, 4200)
+        clearProfileStore()
+    }
+
+    func testController_secondTickSameTemp_doesNotResendMode() {
+        clearProfileStore()
+        let store = ProfileStore()
+        store.enabled = true
+        store.bootstrapIfNeeded(fanCount: 1, defaultMaxRPM: 7000)
+        let fake = FakeFanCurveHelper()
+        let c = FanCurveController(helper: fake, store: store)
+        let snap = makeControllerSnapshot(fans: [makeControllerFan(id: 0)],
+                                          temps: [("TC0D", 65)])
+        c.tick(snapshot: snap)
+        fake.reset()
+        c.tick(snapshot: snap)
+        XCTAssertEqual(fake.modeCalls.count, 0, "mode should not be re-set on every tick")
+    }
 }

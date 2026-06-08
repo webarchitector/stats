@@ -33,3 +33,68 @@ public final class FakeFanCurveHelper: FanCurveHelper {
     public func reset() { modeCalls.removeAll(); speedCalls.removeAll() }
 }
 #endif
+
+public final class FanCurveController {
+    private let helper: FanCurveHelper
+    private let store: ProfileStore
+    private var managedFans: Set<Int> = []
+    private var lastApplied: [Int: Int] = [:]
+    private var lastTempForHyst: [Int: Double] = [:]
+    private var isAsleep: Bool = false
+
+    public init(helper: FanCurveHelper, store: ProfileStore) {
+        self.helper = helper
+        self.store = store
+    }
+
+    public func tick(snapshot: Sensors_List?) {
+        guard !isAsleep,
+              store.enabled,
+              helper.isActive(),
+              let snapshot = snapshot else { return }
+
+        guard let profile = store.activeProfile(),
+              !profile.points.isEmpty else {
+            relinquish()
+            return
+        }
+
+        guard let effTemp = FanCurve.effectiveTemperature(
+            sensors: snapshot.sensors, drivers: profile.drivers) else { return }
+
+        let fans = snapshot.sensors.compactMap { $0 as? Fan }
+        for fan in fans {
+            let base = FanCurve.interpolate(points: profile.points, tempC: effTemp)
+            let off = (fan.id == 0) ? 0 : profile.fanOffsetRPM
+            let target = clamp(base + off, Int(fan.minSpeed), Int(fan.maxSpeed))
+            applyIfNeeded(fan: fan, target: target, temp: effTemp,
+                          hysteresisC: profile.hysteresisC,
+                          deltaThreshold: profile.deltaRpmThreshold)
+        }
+    }
+
+    private func applyIfNeeded(fan: Fan, target: Int, temp: Double,
+                               hysteresisC: Double, deltaThreshold: Int) {
+        if !managedFans.contains(fan.id) {
+            helper.setFanMode(id: fan.id, mode: FanMode.forced.rawValue)
+            managedFans.insert(fan.id)
+        }
+        // basic apply (no hysteresis / no delta-throttle yet — Task 4.3)
+        helper.setFanSpeed(id: fan.id, value: target)
+        lastApplied[fan.id] = target
+        lastTempForHyst[fan.id] = temp
+    }
+
+    private func relinquish() {
+        for id in managedFans {
+            helper.setFanMode(id: id, mode: FanMode.automatic.rawValue)
+        }
+        managedFans.removeAll()
+        lastApplied.removeAll()
+        lastTempForHyst.removeAll()
+    }
+
+    private func clamp(_ v: Int, _ lo: Int, _ hi: Int) -> Int {
+        max(lo, min(hi, v))
+    }
+}

@@ -150,3 +150,16 @@ public final class FanCurveController {
         max(lo, min(hi, v))
     }
 }
+
+/// Bridges the existing `Kit.SMCHelper` to the narrow `FanCurveHelper` protocol.
+public final class SMCHelperAdapter: FanCurveHelper {
+    public static let shared = SMCHelperAdapter()
+    public init() {}
+    public func isActive() -> Bool { SMCHelper.shared.isActive() }
+    public func setFanMode(id: Int, mode: Int) {
+        SMCHelper.shared.setFanMode(id, mode: mode)
+    }
+    public func setFanSpeed(id: Int, value: Int) {
+        SMCHelper.shared.setFanSpeed(id, speed: value)
+    }
+}

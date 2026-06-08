@@ -523,7 +523,7 @@ internal class FanView: NSStackView {
         NotificationCenter.default.addObserver(self, selector: #selector(self.changeHelperState), name: .fanHelperState, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(self.controlCallback), name: .toggleFanControl, object: nil)
         
-        if let fanMode = self.fan.customMode, self.speedState && fanMode != FanMode.automatic {
+        if let fanMode = self.fan.customMode, self.speedState && fanMode != .automatic && !fanMode.isStatsControlled {
             SMCHelper.shared.setFanMode(fan.id, mode: fanMode.rawValue)
             self.modeButtons?.setMode(FanMode(rawValue: fanMode.rawValue) ?? .automatic)
             
@@ -823,7 +823,7 @@ internal class FanView: NSStackView {
                     guard let self else { return }
                     SMCHelper.shared.setFanMode(self.fan.id, mode: mode.rawValue)
                     self.modeButtons?.setMode(mode)
-                    if !mode.isAutomatic {
+                    if !mode.isAutomatic && !mode.isStatsControlled {
                         self.setSpeed(value: speed, then: { [weak self] in
                             DispatchQueue.main.async { [weak self] in
                                 self?.sliderValueField?.textColor = .systemBlue
@@ -836,7 +836,7 @@ internal class FanView: NSStackView {
             self.willSleepSpeed = nil
         }
         
-        if let value = self.fan.customSpeed, !self.fan.mode.isAutomatic {
+        if let value = self.fan.customSpeed, !self.fan.mode.isAutomatic && !self.fan.mode.isStatsControlled {
             self.setSpeed(value: value, then: { [weak self] in
                 DispatchQueue.main.async { [weak self] in
                     self?.sliderValueField?.textColor = .systemBlue
@@ -846,7 +846,7 @@ internal class FanView: NSStackView {
     }
     
     @objc private func sleepListener(aNotification: NSNotification) {
-        guard SMCHelper.shared.isActive(), let mode = self.fan.customMode, !mode.isAutomatic else { return }
+        guard SMCHelper.shared.isActive(), let mode = self.fan.customMode, !mode.isAutomatic && !mode.isStatsControlled else { return }
         
         self.willSleepMode = mode
         self.willSleepSpeed = self.fan.customSpeed
@@ -893,7 +893,7 @@ internal class FanView: NSStackView {
                     v.setValue(ColorValue(Double(percentage) / 100))
                 }
                 
-                if self.resetModeAfterSleep && !value.mode.isAutomatic {
+                if self.resetModeAfterSleep && !value.mode.isAutomatic && !value.mode.isStatsControlled {
                     if self.sliderValueField?.stringValue != "" && self.slider?.doubleValue != value.value {
                         self.slider?.doubleValue = value.value
                         self.sliderValueField?.stringValue = ""

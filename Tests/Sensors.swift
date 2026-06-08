@@ -6,7 +6,7 @@
 //
 
 import XCTest
-import Sensors
+@testable import Sensors
 
 final class SensorsTests: XCTestCase {
     // MARK: - FanMode.isAutomatic
@@ -39,5 +39,35 @@ final class SensorsTests: XCTestCase {
             let decoded = try JSONDecoder().decode(FanMode.self, from: data)
             XCTAssertEqual(decoded, mode, "round-trip failed for \(mode)")
         }
+    }
+
+    // MARK: - Fan.percentage
+
+    private func makeFan(value: Double, maxSpeed: Double = 7000) -> Fan {
+        Fan(id: 0, key: "F0Ac", name: "Test Fan",
+            minSpeed: 1000, maxSpeed: maxSpeed,
+            value: value, mode: .automatic)
+    }
+
+    func testFan_percentage_zeroWhenValueIsZero() {
+        XCTAssertEqual(makeFan(value: 0).percentage, 0)
+    }
+
+    func testFan_percentage_zeroWhenMaxSpeedIsZero() {
+        XCTAssertEqual(makeFan(value: 3500, maxSpeed: 0).percentage, 0)
+    }
+
+    func testFan_percentage_halfwayAtFiftyPercent() {
+        XCTAssertEqual(makeFan(value: 3500, maxSpeed: 7000).percentage, 50)
+    }
+
+    func testFan_percentage_fullAtMaxSpeed() {
+        XCTAssertEqual(makeFan(value: 7000, maxSpeed: 7000).percentage, 100)
+    }
+
+    func testFan_percentage_unityValuesYieldZero() {
+        // existing impl guards (value != 1 && maxSpeed != 1) — preserve that quirk
+        XCTAssertEqual(makeFan(value: 1, maxSpeed: 7000).percentage, 0)
+        XCTAssertEqual(makeFan(value: 3500, maxSpeed: 1).percentage, 0)
     }
 }

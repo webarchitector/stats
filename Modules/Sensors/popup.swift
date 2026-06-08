@@ -236,21 +236,10 @@ internal class Popup: PopupWrapper {
         let row: NSView = NSView(frame: NSRect(x: 0, y: 0, width: self.frame.width, height: Constants.Popup.separatorHeight))
         row.widthAnchor.constraint(equalToConstant: row.frame.width).isActive = true
         row.heightAnchor.constraint(equalToConstant: row.bounds.height).isActive = true
-        
-        let button = NSButtonWithPadding()
-        button.frame = CGRect(x: row.frame.width - 18, y: 6, width: 18, height: 18)
-        button.bezelStyle = .regularSquare
-        button.isBordered = false
-        button.imageScaling = NSImageScaling.scaleProportionallyDown
-        button.contentTintColor = .lightGray
-        button.action = #selector(self.toggleFanControl)
-        button.target = self
-        button.toolTip = localizedString("Control")
-        button.image = iconFromSymbol(name: "slider.horizontal.3", scale: .medium)
-        
-        row.addSubview(separatorView(localizedString("Fans"), width: self.frame.width, rightInset: 24))
-        row.addSubview(button)
-        
+
+        // Removed the Control hide/show toggle — picker should always be reachable.
+        row.addSubview(separatorView(localizedString("Fans"), width: self.frame.width, rightInset: 0))
+
         return row
     }
     
@@ -930,25 +919,21 @@ internal class FanView: NSStackView {
     private func setupControls(_ isInstalled: Bool? = nil) {
         let helperState = isInstalled ?? SMCHelper.shared.isInstalled
 
-        if !self.controlState {
+        // Fan UI is always visible — the legacy hide/show toggle was removed
+        // because the curve-profile picker should always be reachable.
+        if helperState {
             self.helperView?.removeFromSuperview()
-            self.controlView?.removeFromSuperview()
-            self.buttonsView?.removeFromSuperview()
+            if self.fan.maxSpeed != self.fan.minSpeed, let v = self.buttonsView {
+                self.addArrangedSubview(v)
+            }
+            if self.fan.mode == .forced, let v = self.controlView {
+                self.addArrangedSubview(v)
+            }
         } else {
-            if helperState {
-                self.helperView?.removeFromSuperview()
-                if self.fan.maxSpeed != self.fan.minSpeed, let v = self.buttonsView {
-                    self.addArrangedSubview(v)
-                }
-                if self.fan.mode == .forced, let v = self.controlView {
-                    self.addArrangedSubview(v)
-                }
-            } else {
-                self.buttonsView?.removeFromSuperview()
-                self.controlView?.removeFromSuperview()
-                if let v = self.helperView {
-                    self.addArrangedSubview(v)
-                }
+            self.buttonsView?.removeFromSuperview()
+            self.controlView?.removeFromSuperview()
+            if let v = self.helperView {
+                self.addArrangedSubview(v)
             }
         }
 

@@ -13,10 +13,6 @@ import Cocoa
 import Kit
 
 class ApplicationSettings: NSStackView {
-    private var updateIntervalValue: String {
-        Store.shared.string(key: "update-interval", defaultValue: AppUpdateInterval.silent.rawValue)
-    }
-    
     private var temperatureUnitsValue: String {
         get { Store.shared.string(key: "temperature_units", defaultValue: "system") }
         set { Store.shared.set(key: "temperature_units", value: newValue) }
@@ -50,13 +46,12 @@ class ApplicationSettings: NSStackView {
         }
     }
     
-    private var updateSelector: NSPopUpButton?
     private var startAtLoginBtn: NSSwitch?
 
     private var combinedModulesView: PreferencesSection?
     private var fanHelperView: PreferencesSection?
+    private var moduleSwitches: [String: NSSwitch] = [:]
 
-    private var updateWindow: UpdateWindow?
     private let moduleSelector: ModuleSelectorView = ModuleSelectorView()
 
     private var CPUeButton: NSButton?
@@ -81,19 +76,13 @@ class ApplicationSettings: NSStackView {
         scrollView.stackView.spacing = Constants.Settings.margin
         
         scrollView.stackView.addArrangedSubview(self.informationView())
-        
-        self.updateSelector = selectView(
-            action: #selector(self.toggleUpdateInterval),
-            items: AppUpdateIntervals,
-            selected: self.updateIntervalValue
-        )
+
         self.startAtLoginBtn = switchView(
             action: #selector(self.toggleLaunchAtLogin),
             state: LaunchAtLogin.isEnabled
         )
-        
+
         scrollView.stackView.addArrangedSubview(PreferencesSection([
-            PreferencesRow(localizedString("Check for updates"), component: self.updateSelector!),
             PreferencesRow(localizedString("Temperature"), component: selectView(
                 action: #selector(self.toggleTemperatureUnits),
                 items: TemperatureUnits,
@@ -138,6 +127,16 @@ class ApplicationSettings: NSStackView {
         self.combinedModulesView?.setRowVisibility(2, newState: self.combinedModulesState)
         self.combinedModulesView?.setRowVisibility(3, newState: self.combinedModulesState)
         self.combinedModulesView?.setRowVisibility(4, newState: self.combinedModulesState)
+
+        let moduleRows: [NSView] = modules.filter({ $0.available }).map { (m: Module) in
+            let sw = switchView(action: #selector(self.toggleModule), state: m.enabled)
+            sw.identifier = NSUserInterfaceItemIdentifier(rawValue: m.name)
+            self.moduleSwitches[m.name] = sw
+            return PreferencesRow(localizedString(m.name), id: m.name, component: sw)
+        }
+        if !moduleRows.isEmpty {
+            scrollView.stackView.addArrangedSubview(PreferencesSection(title: localizedString("Modules"), moduleRows))
+        }
 
         scrollView.stackView.addArrangedSubview(PreferencesSection(title: localizedString("Settings"), [
             PreferencesRow(
@@ -194,101 +193,57 @@ class ApplicationSettings: NSStackView {
     
     internal func viewWillAppear() {
         self.startAtLoginBtn?.state = LaunchAtLogin.isEnabled ? .on : .off
-
-        var idx = self.updateSelector?.indexOfSelectedItem ?? 0
-        if let items = self.updateSelector?.menu?.items {
-            for (i, item) in items.enumerated() {
-                if let obj = item.representedObject as? String, obj == self.updateIntervalValue {
-                    idx = i
-                }
-            }
+        for m in modules where m.available {
+            self.moduleSwitches[m.name]?.state = m.enabled ? .on : .off
         }
-        self.updateSelector?.selectItem(at: idx)
     }
     
     private func informationView() -> NSView {
         let view = NSStackView()
-        view.heightAnchor.constraint(equalToConstant: 220).isActive = true
+        view.heightAnchor.constraint(equalToConstant: 190).isActive = true
         view.orientation = .vertical
         view.distribution = .fill
         view.alignment = .centerY
         view.spacing = 0
-        
+
         let container: NSGridView = NSGridView()
-        container.heightAnchor.constraint(equalToConstant: 180).isActive = true
+        container.heightAnchor.constraint(equalToConstant: 160).isActive = true
         container.rowSpacing = 0
         container.yPlacement = .center
         container.xPlacement = .center
-        
+
         let iconView: NSImageView = NSImageView(image: NSImage(named: NSImage.Name("AppIcon"))!)
-        
+
         let statsName: NSTextField = TextView(frame: NSRect(x: 0, y: 0, width: view.frame.width, height: 22))
         statsName.alignment = .center
         statsName.font = NSFont.systemFont(ofSize: 20, weight: .regular)
         statsName.stringValue = "Stats"
         statsName.isSelectable = true
-        
+
         let versionNumber = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as! String
         let buildNumber = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as! String
-        
+
         let statsVersion: NSTextField = TextView(frame: NSRect(x: 0, y: 0, width: view.frame.width, height: 16))
         statsVersion.alignment = .center
         statsVersion.font = NSFont.systemFont(ofSize: 12, weight: .regular)
         statsVersion.stringValue = "\(localizedString("Version")) \(versionNumber)"
         statsVersion.isSelectable = true
         statsVersion.toolTip = "\(localizedString("Build number")) \(buildNumber)"
-        
-        let updateButton: NSButton = NSButton()
-        updateButton.title = localizedString("Check for update")
-        updateButton.bezelStyle = .rounded
-        updateButton.target = self
-        updateButton.action = #selector(self.updateAction)
-        
+
         container.addRow(with: [iconView])
         container.addRow(with: [statsName])
         container.addRow(with: [statsVersion])
-        container.addRow(with: [updateButton])
-        
+
         container.row(at: 1).height = 22
         container.row(at: 2).height = 20
-        container.row(at: 3).height = 30
-        
+
         view.addArrangedSubview(container)
-        
+
         return view
     }
-    
+
     // MARK: - actions
-    
-    @objc private func updateAction() {
-        updater.check(force: true, completion: { result, error in
-            if error != nil {
-                debug("error updater.check(): \(error!.localizedDescription)")
-                return
-            }
-            
-            guard error == nil, let version: version_s = result else {
-                debug("download error(): \(error!.localizedDescription)")
-                return
-            }
-            
-            DispatchQueue.main.async(execute: {
-                if self.updateWindow == nil {
-                    let w = UpdateWindow()
-                    w.onClose = { [weak self] in self?.updateWindow = nil }
-                    self.updateWindow = w
-                }
-                self.updateWindow?.open(version, settingButton: true)
-                return
-            })
-        })
-    }
-    
-    @objc private func toggleUpdateInterval(_ sender: NSMenuItem) {
-        guard let key = sender.representedObject as? String else { return }
-        Store.shared.set(key: "update-interval", value: key)
-    }
-    
+
     @objc private func toggleTemperatureUnits(_ sender: NSMenuItem) {
         guard let key = sender.representedObject as? String else { return }
         self.temperatureUnitsValue = key
@@ -420,6 +375,16 @@ class ApplicationSettings: NSStackView {
     
     @objc private func toggleSystemWidgetsUpdatesState(_ sender: NSButton) {
         self.systemWidgetsUpdatesState = sender.state == NSControl.StateValue.on
+    }
+
+    @objc private func toggleModule(_ sender: NSSwitch) {
+        guard let name = sender.identifier?.rawValue,
+              let module = modules.first(where: { $0.name == name }) else { return }
+        if sender.state == .on {
+            module.enable()
+        } else {
+            module.disable()
+        }
     }
 }
 

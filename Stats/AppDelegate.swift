@@ -20,7 +20,6 @@ import Sensors
 import GPU
 import Clock
 
-let updater = Updater(github: "exelban/stats", url: "https://api.mac-stats.com/release/latest")
 var modules: [Module] = [
     CPU(),
     GPU(),
@@ -35,14 +34,12 @@ var modules: [Module] = [
 @main
 class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     internal var settingsWindow: SettingsWindow?
-    internal var updateWindow: UpdateWindow?
     internal var setupWindow: SetupWindow?
     internal var supportWindow: SupportWindow?
-    
+
     internal var menuBarItem: NSStatusItem? = nil
     internal var combinedView: CombinedView = CombinedView()
-    
-    internal let updateActivity = NSBackgroundActivityScheduler(identifier: "eu.exelban.Stats.updateCheck")
+
     internal let supportActivity = NSBackgroundActivityScheduler(identifier: "eu.exelban.Stats.support")
     
     internal var clickInNotification: Bool = false
@@ -136,14 +133,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         return w
     }
     
-    internal func ensureUpdateWindow() -> UpdateWindow {
-        if let w = self.updateWindow { return w }
-        let w = UpdateWindow()
-        w.onClose = { [weak self] in self?.updateWindow = nil }
-        self.updateWindow = w
-        return w
-    }
-    
     internal func ensureSetupWindow() -> SetupWindow {
         if let w = self.setupWindow { return w }
         let w = SetupWindow()
@@ -164,20 +153,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
                                 didReceive response: UNNotificationResponse,
                                 withCompletionHandler completionHandler: @escaping () -> Void) {
         self.clickInNotification = true
-        
-        if let uri = response.notification.request.content.userInfo["url"] as? String {
-            debug("Downloading new version of app...")
-            if let url = URL(string: uri) {
-                updater.download(url, completion: { path in
-                    updater.install(path: path) { error in
-                        if let error {
-                            showAlert("Error update Stats", error, .critical)
-                        }
-                    }
-                })
-            }
-        }
-        
         completionHandler()
     }
 }

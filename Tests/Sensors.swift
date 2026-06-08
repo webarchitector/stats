@@ -289,4 +289,66 @@ final class SensorsTests: XCTestCase {
         let r = FanCurve.interpolate(points: pts, tempC: 50)
         XCTAssertTrue(r == 2000 || r == 2001, "got \(r)")
     }
+
+    // MARK: - effectiveTemperature
+
+    // Sensor.localValue for .temperature reformats `value` through the
+    // user's temperature unit (Celsius/Fahrenheit) and rounds to whole
+    // degrees. Force Celsius and use integer values so localValue is
+    // deterministic across machines.
+    private func forceCelsius() {
+        Store.shared.set(key: "temperature_units", value: "celsius")
+    }
+
+    private func makeTempSensor(key: String, value: Double) -> Sensor {
+        Sensor(key: key, name: key, value: value,
+               group: .CPU, type: .temperature, platforms: Platform.all)
+    }
+
+    func testEffectiveTemperature_emptyDrivers_returnsNil() {
+        forceCelsius()
+        let r = FanCurve.effectiveTemperature(sensors: [], drivers: [])
+        XCTAssertNil(r)
+    }
+
+    func testEffectiveTemperature_noMatchingSensors_returnsNil() {
+        forceCelsius()
+        let sensors: [Sensor_p] = [makeTempSensor(key: "TC0D", value: 60)]
+        let r = FanCurve.effectiveTemperature(sensors: sensors,
+                drivers: [DriverSensor(key: "MISSING")])
+        XCTAssertNil(r)
+    }
+
+    func testEffectiveTemperature_singleDriver_returnsItsValue() {
+        forceCelsius()
+        let sensors: [Sensor_p] = [makeTempSensor(key: "TC0D", value: 65)]
+        let r = FanCurve.effectiveTemperature(sensors: sensors,
+                drivers: [DriverSensor(key: "TC0D")])
+        XCTAssertEqual(r, 65)
+    }
+
+    func testEffectiveTemperature_multipleDrivers_returnsMax() {
+        forceCelsius()
+        let sensors: [Sensor_p] = [
+            makeTempSensor(key: "TC0D", value: 60),
+            makeTempSensor(key: "TG0D", value: 75),
+            makeTempSensor(key: "TCAD", value: 55),
+        ]
+        let r = FanCurve.effectiveTemperature(sensors: sensors,
+                drivers: [DriverSensor(key: "TC0D"),
+                          DriverSensor(key: "TG0D"),
+                          DriverSensor(key: "TCAD")])
+        XCTAssertEqual(r, 75)
+    }
+
+    func testEffectiveTemperature_skipsMissingDrivers() {
+        forceCelsius()
+        let sensors: [Sensor_p] = [
+            makeTempSensor(key: "TC0D", value: 60),
+        ]
+        let r = FanCurve.effectiveTemperature(sensors: sensors,
+                drivers: [DriverSensor(key: "TC0D"),
+                          DriverSensor(key: "MISSING")])
+        XCTAssertEqual(r, 60)
+    }
 }

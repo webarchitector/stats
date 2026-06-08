@@ -27,3 +27,16 @@ public enum FanCurve {
         return last.rpm
     }
 }
+
+extension FanCurve {
+    /// Returns the maximum localValue among sensors whose key matches any driver.
+    /// Returns nil if no driver matches any sensor.
+    public static func effectiveTemperature(sensors: [Sensor_p],
+                                            drivers: [DriverSensor]) -> Double? {
+        let keys = Set(drivers.map(\.key))
+        let values = sensors
+            .filter { keys.contains($0.key) }
+            .map(\.localValue)
+        return values.max()
+    }
+}

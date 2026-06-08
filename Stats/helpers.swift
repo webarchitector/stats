@@ -230,11 +230,7 @@ extension AppDelegate {
         if !Store.shared.exist(key: "setupProcess") || !Store.shared.exist(key: "runAtLoginInitialized") {
             return
         }
-        if SystemStats.shared.auth.hasCredentials() {
-            guard let plan = SystemStats.shared.plan else { return }
-            if plan != .free { return }
-        }
-        
+
         let now = Int(Date().timeIntervalSince1970)
         if !Store.shared.exist(key: "support_ts") {
             Store.shared.set(key: "support_ts", value: now)

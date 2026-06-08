@@ -24,8 +24,6 @@
 "Open Network settings" = "Ava võrgu seaded";
 "Battery" = "Aku";
 "Open Battery settings" = "Ava aku seaded";
-"Bluetooth" = "Bluetooth";
-"Open Bluetooth settings" = "Ava Bluetoothi seaded";
 "Clock" = "Kell";
 "Open Clock settings" = "Ava kella seaded";
 
@@ -474,9 +472,6 @@
 "Charging Voltage" = "Laadimise pinge";
 "Charger state inside the battery" = "Laadija olek aku sees";
 
-// Bluetooth
-"Battery to show" = "Aku, mida näidata";
-"No Bluetooth devices are available" = "Ükski Bluetoothi seade pole saadaval";
 
 // Clock
 "Time zone" = "Ajavöönd";

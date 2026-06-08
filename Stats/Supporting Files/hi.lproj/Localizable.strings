@@ -24,8 +24,6 @@
 "Open Network settings" = "नेटवर्क सेटिंग्स खोलें";
 "Battery" = "बैटरी";
 "Open Battery settings" = "बैटरी सेटिंग्स खोलें";
-"Bluetooth" = "ब्लूटूथ";
-"Open Bluetooth settings" = "ब्लूटूथ सेटिंग्स खोलें";
 "Clock" = "घड़ी";
 "Open Clock settings" = "घड़ी सेटिंग्स खोलें";
 
@@ -474,9 +472,6 @@
 "Charging Voltage" = "चार्जिंग वोल्टेज"; // translategemma:4b
 "Charger state inside the battery" = "बैटरी के अंदर चार्जर की स्थिति"; // translategemma:4b
 
-// Bluetooth
-"Battery to show" = "दिखाने के लिए बैटरी";
-"No Bluetooth devices are available" = "कोई ब्लूटूथ डिवाइस उपलब्ध नहीं हैं";
 
 // Clock
 "Time zone" = "समय क्षेत्र";

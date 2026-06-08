@@ -24,8 +24,6 @@
 "Open Network settings" = "ネットワークの設定を開く";
 "Battery" = "バッテリー";
 "Open Battery settings" = "バッテリーの設定を開く";
-"Bluetooth" = "Bluetooth";
-"Open Bluetooth settings" = "Bluetooth の設定を開く";
 "Clock" = "時計";
 "Open Clock settings" = "時計の設定を開く";
 
@@ -474,9 +472,6 @@
 "Charging Voltage" = "充電電圧"; // translategemma:4b
 "Charger state inside the battery" = "バッテリー内部の充電状態"; // translategemma:4b
 
-// Bluetooth
-"Battery to show" = "バッテリー残量を表示するデバイス";
-"No Bluetooth devices are available" = "利用可能な Bluetooth デバイスがありません";
 
 // Clock
 "Time zone" = "タイムゾーン"; // translategemma:4b

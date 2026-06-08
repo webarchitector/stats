@@ -24,8 +24,6 @@
 "Open Network settings" = "Hálózati beállítások megnyitása";
 "Battery" = "Akkumulátor";
 "Open Battery settings" = "Akkumulátor beállítások megnyitása";
-"Bluetooth" = "Bluetooth";
-"Open Bluetooth settings" = "Bluetooth beállítások megnyitása";
 "Clock" = "Óra";
 "Open Clock settings" = "Óra beállításainak megnyitása";
 
@@ -474,9 +472,6 @@
 "Charging Voltage" = "Töltési feszültség"; // translategemma:4b
 "Charger state inside the battery" = "Töltési állapot az akkumulátoron belül"; // gemma4:31b
 
-// Bluetooth
-"Battery to show" = "Akkumulátor megjelenítése";
-"No Bluetooth devices are available" = "Nincs elérhető Bluetooth eszköz";
 
 // Clock
 "Time zone" = "Időzóna";

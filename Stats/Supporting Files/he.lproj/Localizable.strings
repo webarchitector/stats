@@ -24,8 +24,6 @@
 "Open Network settings" = "פתח/י הגדרות רשת";
 "Battery" = "בטרייה";
 "Open Battery settings" = "פתח/י הגדרות בטרייה";
-"Bluetooth" = "בלוטות׳";
-"Open Bluetooth settings" = "פתח/י הגדרות בלוטות׳";
 "Clock" = "שעון"; // translategemma:4b
 "Open Clock settings" = "פתח את הגדרות השעון"; // gemma4:31b
 
@@ -474,9 +472,6 @@
 "Charging Voltage" = "מתח טעינה"; // translategemma:4b
 "Charger state inside the battery" = "מצב טעינה בתוך הסוללה"; // translategemma:4b
 
-// Bluetooth
-"Battery to show" = "סוללה להצגה";
-"No Bluetooth devices are available" = "לא קיימים מכשירים בלוטות׳ זמינים";
 
 // Clock
 "Time zone" = "אזור זמן"; // translategemma:4b

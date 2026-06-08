@@ -24,8 +24,6 @@
 "Open Network settings" = "Ouvrir les paramètres réseau";
 "Battery" = "Batterie";
 "Open Battery settings" = "Ouvrir les paramètres de la batterie";
-"Bluetooth" = "Bluetooth";
-"Open Bluetooth settings" = "Ouvrir les paramètres Bluetooth";
 "Clock" = "Horloge";
 "Open Clock settings" = "Ouvrir les paramètres de l'horloge";
 
@@ -474,9 +472,6 @@
 "Charging Voltage" = "Tension de charge";
 "Charger state inside the battery" = "État de charge à l'intérieur de la batterie"; // translategemma:4b
 
-// Bluetooth
-"Battery to show" = "Batterie à afficher";
-"No Bluetooth devices are available" = "Aucun appareil Bluetooth n'est disponible";
 
 // Clock
 "Time zone" = "Fuseau horaire";

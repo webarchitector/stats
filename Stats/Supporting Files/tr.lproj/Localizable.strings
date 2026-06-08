@@ -24,8 +24,6 @@
 "Open Network settings" = "Ağ ayarlarını aç";
 "Battery" = "Batarya";
 "Open Battery settings" = "Batarya ayarlarını aç";
-"Bluetooth" = "Bluetooth";
-"Open Bluetooth settings" = "Bluetooth ayarlarını aç";
 "Clock" = "Saat";
 "Open Clock settings" = "Saat ayarlarını aç";
 
@@ -474,9 +472,6 @@
 "Charging Voltage" = "Şarj Voltajı";
 "Charger state inside the battery" = "Pil içindeki şarj cihazının durumu";
 
-// Bluetooth
-"Battery to show" = "Gösterilecek pil";
-"No Bluetooth devices are available" = "Herhangi bir Bluetooth cihazı mevcut değil";
 
 // Clock
 "Time zone" = "Saat dilimi";

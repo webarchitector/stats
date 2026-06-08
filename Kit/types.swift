@@ -293,9 +293,6 @@ public extension Notification.Name {
     static let pause = Notification.Name("pause")
     static let fanProfileChanged = Notification.Name("fanProfileChanged")
     static let combinedModulesPopup = Notification.Name("combinedModulesPopup")
-    static let remoteLoginSuccess = Notification.Name("remoteLoginSuccess")
-    static let remoteState = Notification.Name("remoteState")
-    static let remoteAuthenticated = Notification.Name("remoteAuthenticated")
     static let openWindow = Notification.Name("openWindow")
 }
 

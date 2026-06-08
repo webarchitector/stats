@@ -24,8 +24,6 @@
 "Open Network settings" = "Åpne nettverksinnstillinger";
 "Battery" = "Batteri";
 "Open Battery settings" = "Åpne batteriinnstillinger";
-"Bluetooth" = "Bluetooth";
-"Open Bluetooth settings" = "Åpne Bluetooth-innstillinger";
 "Clock" = "Klokke";
 "Open Clock settings" = "Åpne klokkeinnstillinger";
 
@@ -474,9 +472,6 @@
 "Charging Voltage" = "Ladespenning"; // gemma4:31b
 "Charger state inside the battery" = "Ladestatus inne i batteriet"; // gemma4:31b
 
-// Bluetooth
-"Battery to show" = "Batteri å vise";
-"No Bluetooth devices are available" = "Ingen Bluetooth-enheter er tilgjengelige";
 
 // Clock
 "Time zone" = "Tidssone";

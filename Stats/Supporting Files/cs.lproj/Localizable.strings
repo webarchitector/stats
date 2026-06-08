@@ -24,8 +24,6 @@
 "Open Network settings" = "Otevřít nastavení sítě";
 "Battery" = "Baterie";
 "Open Battery settings" = "Otevřít nastavení baterie";
-"Bluetooth" = "Bluetooth";
-"Open Bluetooth settings" = "Otevřít nastavení bluetooth";
 "Clock" = "Hodiny"; // translategemma:4b
 "Open Clock settings" = "Otevřít nastavení hodin"; // gemma4:31b
 
@@ -474,9 +472,6 @@
 "Charging Voltage" = "Nabíjecí napětí"; // gemma4:31b
 "Charger state inside the battery" = "Stav nabíjení uvnitř baterie"; // translategemma:4b
 
-// Bluetooth
-"Battery to show" = "Baterie k zobrazení";
-"No Bluetooth devices are available" = "Žádná bluetooth zařízení nejsou k dispozici";
 
 // Clock
 "Time zone" = "Časové pásmo"; // gemma4:31b

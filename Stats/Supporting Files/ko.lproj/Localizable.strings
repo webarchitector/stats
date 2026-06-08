@@ -24,8 +24,6 @@
 "Open Network settings" = "네트워크 설정 열기";
 "Battery" = "배터리";
 "Open Battery settings" = "배터리 설정 열기";
-"Bluetooth" = "블루투스";
-"Open Bluetooth settings" = "블루투스 설정 열기";
 "Clock" = "시계";
 "Open Clock settings" = "시계 설정 ";
 
@@ -474,9 +472,6 @@
 "Charging Voltage" = "충전 전압"; // translategemma:4b
 "Charger state inside the battery" = "배터리 내부의 충전 상태"; // gemma4:31b
 
-// Bluetooth
-"Battery to show" = "표시할 배터리";
-"No Bluetooth devices are available" = "사용 가능한 블루투스 장치가 없습니다";
 
 // Clock
 "Time zone" = "시간대";

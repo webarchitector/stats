@@ -24,8 +24,6 @@
 "Open Network settings" = "Åben indstillinger for netværk";
 "Battery" = "Batteri";
 "Open Battery settings" = "Åben indstillinger for batteri";
-"Bluetooth" = "Bluetooth";
-"Open Bluetooth settings" = "Åben indstillinger for bluetooth";
 "Clock" = "Ur";
 "Open Clock settings" = "Åben indstillinger for ur";
 
@@ -475,8 +473,6 @@
 "Charger state inside the battery" = "Charger state inside the battery";
 "Fan" = "Blæser";
 "HID sensors" = "HID sensorer";
-"Battery to show" = "Battery to show";
-"No Bluetooth devices are available" = "No Bluetooth devices are available";
 "Synchronize fan's control" = "Synkroniser blæserkontrol";
 "Current" = "Strøm";
 "Time zone" = "Time zone";
@@ -624,9 +620,6 @@
 "Charging Voltage" = "Opladningsspænding"; // translategemma:4b
 "Charger state inside the battery" = "Tilstand af opladningssystemet inde i batteriet"; // translategemma:4b
 
-// Bluetooth
-"Battery to show" = "Batteri der vises";
-"No Bluetooth devices are available" = "Ingen tilgængelige Bluetoothenheder";
 
 // Clock
 "Time zone" = "Tidszone";

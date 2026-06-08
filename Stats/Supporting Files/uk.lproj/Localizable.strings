@@ -24,8 +24,6 @@
 "Open Network settings" = "Відкрити налаштування мережі";
 "Battery" = "Акумулятор";
 "Open Battery settings" = "Відкрити налаштування акумулятора";
-"Bluetooth" = "Bluetooth";
-"Open Bluetooth settings" = "Відкрити налаштування bluetooth";
 "Clock" = "Годинник";
 "Open Clock settings" = "Відкрити налаштування годинника";
 
@@ -474,9 +472,6 @@
 "Charging Voltage" = "Напруга зарядки";
 "Charger state inside the battery" = "Стан зарядки всередині акумулятора";
 
-// Bluetooth
-"Battery to show" = "Активна батарея";
-"No Bluetooth devices are available" = "Немає пристроїв Bluetooth";
 
 // Clock
 "Time zone" = "Часовий пояс";

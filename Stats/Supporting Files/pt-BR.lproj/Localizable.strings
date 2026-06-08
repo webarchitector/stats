@@ -24,8 +24,6 @@
 "Open Network settings" = "Abrir configurações da Rede";
 "Battery" = "Bateria";
 "Open Battery settings" = "Abrir configurações da Bateria";
-"Bluetooth" = "Bluetooth";
-"Open Bluetooth settings" = "Abrir configurações do Bluetooth";
 "Clock" = "Relógio";
 "Open Clock settings" = "Abrir configurações do Relógio";
 
@@ -474,9 +472,6 @@
 "Charging Voltage" = "Tensão de carregamento";
 "Charger state inside the battery" = "Estado de carregamento dentro da bateria"; // gemma4:31b
 
-// Bluetooth
-"Battery to show" = "Bateria para mostrar";
-"No Bluetooth devices are available" = "Nenhum dispositivo Bluetooth disponível";
 
 // Clock
 "Time zone" = "Fuso horário";

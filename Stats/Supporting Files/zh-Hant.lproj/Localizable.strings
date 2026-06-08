@@ -24,8 +24,6 @@
 "Open Network settings" = "打開網路設定";
 "Battery" = "電池";
 "Open Battery settings" = "打開電池設定";
-"Bluetooth" = "藍牙";
-"Open Bluetooth settings" = "打開藍牙設定";
 "Clock" = "時鐘";
 "Open Clock settings" = "打開時鐘設定";
 
@@ -474,9 +472,6 @@
 "Charging Voltage" = "充電電壓";
 "Charger state inside the battery" = "在電池圖示中顯示充電狀態";
 
-// Bluetooth
-"Battery to show" = "顯示藍牙裝置的電池電量";
-"No Bluetooth devices are available" = "沒有可用的藍牙裝置";
 
 // Clock
 "Time zone" = "時區";

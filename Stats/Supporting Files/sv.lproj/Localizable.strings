@@ -24,8 +24,6 @@
 "Open Network settings" = "Öppna nätverksinställningar";
 "Battery" = "Batteri";
 "Open Battery settings" = "Öppna batteriinställningar";
-"Bluetooth" = "Bluetooth";
-"Open Bluetooth settings" = "Öppna Bluetooth-inställningar";
 "Clock" = "Klocka";
 "Open Clock settings" = "Öppna klockinställningar";
 
@@ -474,9 +472,6 @@
 "Charging Voltage" = "Laddningsspänning";
 "Charger state inside the battery" = "Laddningsstatus inuti batteriet"; // translategemma:4b
 
-// Bluetooth
-"Battery to show" = "Batteri att visa";
-"No Bluetooth devices are available" = "Inga Bluetooth-enheter tillgängliga";
 
 // Clock
 "Time zone" = "Tidszon";

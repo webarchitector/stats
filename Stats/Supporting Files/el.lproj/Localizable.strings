@@ -24,8 +24,6 @@
 "Open Network settings" = "Άνοιγμα ρυθμίσεων Δικτύου";
 "Battery" = "Μπαταρία";
 "Open Battery settings" = "Άνοιγμα ρυθμίσεων Μπαταρίας";
-"Bluetooth" = "Bluetooth";
-"Open Bluetooth settings" = "Άνοιγμα ρυθμίσεων Bluetooth";
 "Clock" = "Ρολόι"; // gemma4:31b
 "Open Clock settings" = "Άνοιγμα ρυθμίσεων ρολογιού"; // translategemma:4b
 
@@ -474,9 +472,6 @@
 "Charging Voltage" = "Τάση φόρτισης"; // translategemma:4b
 "Charger state inside the battery" = "Κατάσταση φόρτισης εντός της μπαταρίας"; // gemma4:31b
 
-// Bluetooth
-"Battery to show" = "Μπαταρία προς εμφάνιση";
-"No Bluetooth devices are available" = "Καμία συσκευή Bluetooth δεν είναι διαθέσιμη";
 
 // Clock
 "Time zone" = "Ζώνη ώρας"; // translategemma:4b

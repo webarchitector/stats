@@ -24,8 +24,6 @@
 "Open Network settings" = "打开网络设置";
 "Battery" = "电池";
 "Open Battery settings" = "打开电池设置";
-"Bluetooth" = "蓝牙";
-"Open Bluetooth settings" = "打开蓝牙设置";
 "Clock" = "时钟";
 "Open Clock settings" = "打开时钟设置";
 
@@ -474,9 +472,6 @@
 "Charging Voltage" = "充电电压";
 "Charger state inside the battery" = "在电池图标内显示充电器状态";
 
-// Bluetooth
-"Battery to show" = "显示的设备";
-"No Bluetooth devices are available" = "没有可用的蓝牙设备";
 
 // Clock
 "Time zone" = "时区";

@@ -24,8 +24,6 @@
 "Open Network settings" = "Avaa Verkko asetukset";
 "Battery" = "Akku";
 "Open Battery settings" = "Avaa Akku asetukset";
-"Bluetooth" = "Bluetooth";
-"Open Bluetooth settings" = "Avaa Bluetooth asetukset";
 "Clock" = "Kello";
 "Open Clock settings" = "Avaa Kello asetukset";
 
@@ -474,9 +472,6 @@
 "Charging Voltage" = "Latausjännite";
 "Charger state inside the battery" = "Lataustila akun sisällä"; // gemma4:31b
 
-// Bluetooth
-"Battery to show" = "Näytettävä akku";
-"No Bluetooth devices are available" = "Bluetooth-laitteita ei ole saatavilla";
 
 // Clock
 "Time zone" = "Aikavyöhyke";

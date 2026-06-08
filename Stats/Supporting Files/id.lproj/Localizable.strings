@@ -24,8 +24,6 @@
 "Open Network settings" = "Buka pengaturan jaringan";
 "Battery" = "Baterai";
 "Open Battery settings" = "Buka pengaturan baterai";
-"Bluetooth" = "Bluetooth";
-"Open Bluetooth settings" = "Buka pengaturan bluetooth";
 "Clock" = "Jam"; // translategemma:4b
 "Open Clock settings" = "Buka pengaturan jam"; // translategemma:4b
 
@@ -474,9 +472,6 @@
 "Charging Voltage" = "Tegangan pengisian"; // translategemma:4b
 "Charger state inside the battery" = "Status pengisian daya di dalam baterai"; // translategemma:4b
 
-// Bluetooth
-"Battery to show" = "Baterai untuk ditampilkan";
-"No Bluetooth devices are available" = "Tidak ada perangkat bluetooth yang tersedia";
 
 // Clock
 "Time zone" = "Zona waktu"; // translategemma:4b

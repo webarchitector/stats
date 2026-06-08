@@ -24,8 +24,6 @@
 "Open Network settings" = "فتح إعدادات الشبكة";
 "Battery" = "البطارية";
 "Open Battery settings" = "فتح إعدادات البطارية";
-"Bluetooth" = "بلوتوث";
-"Open Bluetooth settings" = "فتح إعدادات البلوتوث";
 "Clock" = "الساعة";
 "Open Clock settings" = "فتح إعدادات الساعة";
 
@@ -474,9 +472,6 @@
 "Charging Voltage" = "جهد الشحن"; // translategemma:4b
 "Charger state inside the battery" = "حالة الشحن داخل البطارية"; // gemma4:31b
 
-// Bluetooth
-"Battery to show" = "البطارية المراد عرضها";
-"No Bluetooth devices are available" = "لا توجد أجهزة بلوتوث متاحة";
 
 // Clock
 "Time zone" = "المنطقة الزمنية";

@@ -24,8 +24,6 @@
 "Open Network settings" = "Otvori postavke mreže";
 "Battery" = "Baterija";
 "Open Battery settings" = "Otvori postavke baterije";
-"Bluetooth" = "Bluetooth";
-"Open Bluetooth settings" = "Otvori postavke bluetootha";
 "Clock" = "Sat"; // translategemma:4b
 "Open Clock settings" = "Otvori postavke sata"; // gemma4:31b
 
@@ -474,9 +472,6 @@
 "Charging Voltage" = "Napon punjenja"; // gemma4:31b
 "Charger state inside the battery" = "Stanje punjenja unutar baterije"; // translategemma:4b
 
-// Bluetooth
-"Battery to show" = "Baterija";
-"No Bluetooth devices are available" = "Nema dostupnih Bluetooth uređaja";
 
 // Clock
 "Time zone" = "Vremenska zona"; // translategemma:4b

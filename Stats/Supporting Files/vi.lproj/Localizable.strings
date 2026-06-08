@@ -24,8 +24,6 @@
 "Open Network settings" = "Mở cài đặt mạng";
 "Battery" = "Pin";
 "Open Battery settings" = "Mở cài đặt Pin";
-"Bluetooth" = "Bluetooth";
-"Open Bluetooth settings" = "Mở cài đặt Bluetooth";
 "Clock" = "Đồng hồ";
 "Open Clock settings" = "Mở cài đặt đồng hồ";
 
@@ -474,9 +472,6 @@
 "Charging Voltage" = "Điện áp sạc";
 "Charger state inside the battery" = "Trạng thái sạc bên trong pin";
 
-// Bluetooth
-"Battery to show" = "Hiển thị pin";
-"No Bluetooth devices are available" = "Không có thiết bị Bluetooth nào khả dụng";
 
 // Clock
 "Time zone" = "Múi giờ";

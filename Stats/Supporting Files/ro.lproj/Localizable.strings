@@ -24,8 +24,6 @@
 "Open Network settings" = "Deschide setările de rețea"; // gemma4:31b
 "Battery" = "Baterie"; // translategemma:4b
 "Open Battery settings" = "Deschide setările bateriei"; // translategemma:4b
-"Bluetooth" = "Bluetooth";
-"Open Bluetooth settings" = "Deschide setările Bluetooth"; // translategemma:4b
 "Clock" = "Ceas"; // translategemma:4b
 "Open Clock settings" = "Deschide setările ceasului"; // translategemma:4b
 
@@ -474,9 +472,6 @@
 "Charging Voltage" = "Tensiune de încărcare"; // gemma4:31b
 "Charger state inside the battery" = "Starea încărcării în interiorul bateriei"; // gemma4:31b
 
-// Bluetooth
-"Battery to show" = "Bateria de afișat"; // gemma4:31b
-"No Bluetooth devices are available" = "Nu sunt disponibile dispozitive Bluetooth"; // gemma4:31b
 
 // Clock
 "Time zone" = "Fus orar"; // translategemma:4b

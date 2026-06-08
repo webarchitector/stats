@@ -24,8 +24,6 @@
 "Open Network settings" = "Otvoriť nastavenie siete";
 "Battery" = "Batéria";
 "Open Battery settings" = "Otvoriť nastavenie batérie";
-"Bluetooth" = "Bluetooth";
-"Open Bluetooth settings" = "Otvoriť nastavenie bluetooth";
 "Clock" = "Hodiny"; // translategemma:4b
 "Open Clock settings" = "Otvoriť nastavenia hodín"; // gemma4:31b
 
@@ -475,8 +473,6 @@
 "Charger state inside the battery" = "Charger state inside the battery";
 "Fan" = "Ventilátor";
 "HID sensors" = "HID senzory";
-"Battery to show" = "Battery to show";
-"No Bluetooth devices are available" = "No Bluetooth devices are available";
 "Synchronize fan's control" = "Synchronizácia ovládania ventilátora";
 "Current" = "Prúd";
 "Time zone" = "Time zone";
@@ -624,9 +620,6 @@
 "Charging Voltage" = "Napäť pri nabíjaní"; // translategemma:4b
 "Charger state inside the battery" = "Stav nabíjačky vo vnútri batérie"; // translategemma:4b
 
-// Bluetooth
-"Battery to show" = "Zobraziť batériu";
-"No Bluetooth devices are available" = "Nie sú k dispozícii žiadne zariadenia Bluetooth";
 
 // Clock
 "Time zone" = "Časový pás"; // translategemma:4b

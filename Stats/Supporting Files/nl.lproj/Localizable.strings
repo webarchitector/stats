@@ -24,8 +24,6 @@
 "Open Network settings" = "Open network instellingen";
 "Battery" = "Batterij"; // translategemma:4b
 "Open Battery settings" = "Open battery instellingen";
-"Bluetooth" = "Bluetooth";
-"Open Bluetooth settings" = "Open bluetooth instellingen";
 "Clock" = "Klok";
 "Open Clock settings" = "Open klokinstellingen"; // gemma4:31b
 
@@ -475,8 +473,6 @@
 "Charger state inside the battery" = "Charger state inside the battery";
 "Fan" = "Ventilator";
 "HID sensors" = "HID-Sensoren";
-"Battery to show" = "Battery to show";
-"No Bluetooth devices are available" = "No Bluetooth devices are available";
 "Synchronize fan's control" = "Synchroniseer de bediening van de ventilatoren"; // translategemma:4b
 "Current" = "Huidig";
 "Time zone" = "Time zone";
@@ -624,9 +620,6 @@
 "Charging Voltage" = "Laadspanning"; // translategemma:4b
 "Charger state inside the battery" = "Status van de oplaadunit binnenin de batterij"; // translategemma:4b
 
-// Bluetooth
-"Battery to show" = "Laadstatus weergeven"; // translategemma:4b
-"No Bluetooth devices are available" = "Er zijn geen Bluetooth-apparaten beschikbaar."; // translategemma:4b
 
 // Clock
 "Time zone" = "Tijdszone"; // translategemma:4b

@@ -24,8 +24,6 @@
 "Open Network settings" = "Настройки на мрежата";
 "Battery" = "Батерия";
 "Open Battery settings" = "Настройки на мрежата";
-"Bluetooth" = "Bluetooth";
-"Open Bluetooth settings" = "Настройки на bluetooth";
 "Clock" = "Часовник"; // translategemma:4b
 "Open Clock settings" = "Отвори настройките на часовника"; // gemma4:31b
 
@@ -474,9 +472,6 @@
 "Charging Voltage" = "Напрежение при зареждане"; // gemma4:31b
 "Charger state inside the battery" = "Състояние на зареждането вътре в батерията"; // translategemma:4b
 
-// Bluetooth
-"Battery to show" = "Батерия за показване";
-"No Bluetooth devices are available" = "Няма налични Bluetooth устройства";
 
 // Clock
 "Time zone" = "Часова зона"; // translategemma:4b

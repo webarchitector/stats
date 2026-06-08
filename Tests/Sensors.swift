@@ -855,4 +855,36 @@ final class SensorsTests: XCTestCase {
         XCTAssertEqual(fake.speedCalls.count, 1)
         clearProfileStore()
     }
+
+    // MARK: - Controller profile-change reset
+
+    func testController_profileChangedNotification_resetsLastApplied() {
+        clearProfileStore()
+        let p1 = FanProfile(name: "P1",
+            drivers: [DriverSensor(key: "TC0D")],
+            points: [CurvePoint(tempC: 30, rpm: 1000), CurvePoint(tempC: 80, rpm: 6000)],
+            fanOffsetRPM: 0, hysteresisC: 5.0, deltaRpmThreshold: 100)
+        let store = enabledStoreWithCustomProfile(p1)
+        let fake = FakeFanCurveHelper()
+        let c = FanCurveController(helper: fake, store: store)
+        // Apply at temp=70 → rpm=5000
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0)], temps: [("TC0D", 70)]))
+        // Swap to a new profile with same id (different points). Without reset,
+        // small drops would be blocked by hysteresis (5.0°C band).
+        let p2 = FanProfile(id: p1.id,
+            name: "P2",
+            drivers: [DriverSensor(key: "TC0D")],
+            points: [CurvePoint(tempC: 30, rpm: 2000), CurvePoint(tempC: 80, rpm: 7000)],
+            fanOffsetRPM: 0, hysteresisC: 5.0, deltaRpmThreshold: 100)
+        store.saveProfiles([p2])
+        fake.reset()
+        NotificationCenter.default.post(name: .fanProfileChanged, object: nil)
+        // Tick at temp=69 (1°C drop). Without reset, hysteresis (5.0) would block.
+        // With reset, hyst state cleared → applies the new profile's curve.
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0)], temps: [("TC0D", 69)]))
+        XCTAssertEqual(fake.speedCalls.count, 1, "profile change should clear hysteresis state")
+        clearProfileStore()
+    }
 }

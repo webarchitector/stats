@@ -57,6 +57,12 @@ public final class FanCurveController {
             object: nil, queue: .main) { [weak self] _ in
             self?.handleDidWake()
         }))
+        let defaultNC = NotificationCenter.default
+        observers.append((defaultNC, defaultNC.addObserver(
+            forName: .fanProfileChanged, object: nil, queue: .main) { [weak self] _ in
+            self?.lastApplied.removeAll()
+            self?.lastTempForHyst.removeAll()
+        }))
     }
 
     deinit {

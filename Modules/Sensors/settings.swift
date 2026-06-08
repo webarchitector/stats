@@ -22,6 +22,8 @@ internal class Settings: NSStackView, Settings_v {
     private var fanCtlEnabledState: Bool = false
     private var fanCurveContainer: NSStackView?
     private var profilePopup: NSPopUpButton?
+    private var pointsTable: NSTableView?
+    private let pointsDataSource = CurvePointsTable()
 
     public var callback: (() -> Void) = {}
     public var HIDcallback: (() -> Void) = {}
@@ -125,6 +127,34 @@ internal class Settings: NSStackView, Settings_v {
         let buttonRow = NSStackView(views: [duplicateBtn, deleteBtn])
         buttonRow.spacing = 8
         curveContainer.addArrangedSubview(buttonRow)
+
+        let table = NSTableView()
+        let tempCol = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("temp"))
+        tempCol.title = localizedString("Temp °C")
+        tempCol.width = 80
+        let rpmCol = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("rpm"))
+        rpmCol.title = localizedString("RPM")
+        rpmCol.width = 80
+        table.addTableColumn(tempCol)
+        table.addTableColumn(rpmCol)
+        table.dataSource = self.pointsDataSource
+        table.delegate = self.pointsDataSource
+        self.pointsDataSource.onEdit = { [weak self] _ in
+            self?.persistCurveEdits()
+        }
+        let scroll = NSScrollView()
+        scroll.documentView = table
+        scroll.hasVerticalScroller = true
+        scroll.translatesAutoresizingMaskIntoConstraints = false
+        scroll.heightAnchor.constraint(equalToConstant: 180).isActive = true
+        self.pointsTable = table
+        curveContainer.addArrangedSubview(scroll)
+
+        let addBtn = NSButton(title: "+", target: self, action: #selector(self.addPoint))
+        let removeBtn = NSButton(title: "−", target: self, action: #selector(self.removePoint))
+        let pointBtnRow = NSStackView(views: [addBtn, removeBtn])
+        pointBtnRow.spacing = 8
+        curveContainer.addArrangedSubview(pointBtnRow)
 
         self.refreshCurveEditor()
     }
@@ -275,7 +305,48 @@ internal class Settings: NSStackView, Settings_v {
     }
 
     private func refreshCurveEditor() {
-        // Populated incrementally in later tasks (points table, drivers checklist, graph).
+        let pts = ProfileStore.shared.activeProfile()?.points ?? []
+        self.pointsDataSource.points = pts
+        self.pointsTable?.reloadData()
+    }
+
+    @objc private func addPoint() {
+        var pts = self.pointsDataSource.points
+        let lastTemp = pts.last?.tempC ?? 50
+        pts.append(CurvePoint(tempC: lastTemp + 5, rpm: 3000))
+        pts.sort { $0.tempC < $1.tempC }
+        self.pointsDataSource.points = pts
+        self.pointsTable?.reloadData()
+        self.persistCurveEdits()
+    }
+
+    @objc private func removePoint() {
+        guard let row = self.pointsTable?.selectedRow, row >= 0,
+              self.pointsDataSource.points.count > 2 else { return }
+        self.pointsDataSource.points.remove(at: row)
+        self.pointsTable?.reloadData()
+        self.persistCurveEdits()
+    }
+
+    private func persistCurveEdits() {
+        var profiles = ProfileStore.shared.loadProfiles()
+        guard let activeID = ProfileStore.shared.activeProfileID,
+              let idx = profiles.firstIndex(where: { $0.id == activeID }) else { return }
+        if profiles[idx].isBuiltIn {
+            // Editing a built-in: duplicate first.
+            var copy = profiles[idx]
+            copy.id = UUID()
+            copy.isBuiltIn = false
+            copy.name = profiles[idx].name + " (custom)"
+            copy.points = self.pointsDataSource.points
+            profiles.append(copy)
+            ProfileStore.shared.activeProfileID = copy.id
+        } else {
+            profiles[idx].points = self.pointsDataSource.points
+        }
+        ProfileStore.shared.saveProfiles(profiles)
+        NotificationCenter.default.post(name: .fanProfileChanged, object: nil)
+        self.reloadProfilePicker()
     }
 
     @objc private func duplicateProfile() {
@@ -305,5 +376,42 @@ internal class Settings: NSStackView, Settings_v {
         self.reloadProfilePicker()
         self.refreshCurveEditor()
         NotificationCenter.default.post(name: .fanProfileChanged, object: nil)
+    }
+
+    fileprivate final class CurvePointsTable: NSObject, NSTableViewDataSource, NSTableViewDelegate {
+        var points: [CurvePoint] = []
+        var onEdit: ([CurvePoint]) -> Void = { _ in }
+
+        func numberOfRows(in tableView: NSTableView) -> Int { points.count }
+
+        func tableView(_ tableView: NSTableView,
+                       objectValueFor tableColumn: NSTableColumn?,
+                       row: Int) -> Any? {
+            guard let id = tableColumn?.identifier.rawValue, row < points.count else { return nil }
+            let pt = points[row]
+            switch id {
+            case "temp": return pt.tempC
+            case "rpm":  return pt.rpm
+            default:     return nil
+            }
+        }
+
+        func tableView(_ tableView: NSTableView,
+                       setObjectValue object: Any?,
+                       for tableColumn: NSTableColumn?,
+                       row: Int) {
+            guard let id = tableColumn?.identifier.rawValue, row < points.count else { return }
+            switch id {
+            case "temp":
+                if let s = object as? String, let v = Double(s) { points[row].tempC = v }
+                else if let v = object as? Double { points[row].tempC = v }
+            case "rpm":
+                if let s = object as? String, let v = Int(s) { points[row].rpm = v }
+                else if let v = object as? Int { points[row].rpm = v }
+            default: break
+            }
+            points.sort { $0.tempC < $1.tempC }
+            onEdit(points)
+        }
     }
 }

@@ -406,4 +406,86 @@ final class SensorsTests: XCTestCase {
         let list = FanProfile.builtIns(fanCount: 2, defaultMaxRPM: 7000)
         for p in list { XCTAssertEqual(p.fanOffsetRPM, 50) }
     }
+
+    // MARK: - ProfileStore
+
+    private func clearProfileStore() {
+        Store.shared.remove("fanctl_profiles")
+        Store.shared.remove("fanctl_activeProfile")
+        Store.shared.remove("fanctl_enabled")
+    }
+
+    func testProfileStore_loadEmpty_returnsEmptyArray() {
+        clearProfileStore()
+        let store = ProfileStore()
+        XCTAssertTrue(store.loadProfiles().isEmpty)
+        clearProfileStore()
+    }
+
+    func testProfileStore_saveAndLoad_roundtrip() {
+        clearProfileStore()
+        let store = ProfileStore()
+        let saved = FanProfile.builtIns(fanCount: 1, defaultMaxRPM: 7000)
+        store.saveProfiles(saved)
+        let loaded = store.loadProfiles()
+        XCTAssertEqual(loaded.map(\.id), saved.map(\.id))
+        XCTAssertEqual(loaded.map(\.name), saved.map(\.name))
+        clearProfileStore()
+    }
+
+    func testProfileStore_activeProfileID_nilByDefault() {
+        clearProfileStore()
+        let store = ProfileStore()
+        XCTAssertNil(store.activeProfileID)
+        clearProfileStore()
+    }
+
+    func testProfileStore_activeProfileID_roundtrip() {
+        clearProfileStore()
+        let store = ProfileStore()
+        let uuid = UUID()
+        store.activeProfileID = uuid
+        XCTAssertEqual(store.activeProfileID, uuid)
+        store.activeProfileID = nil
+        XCTAssertNil(store.activeProfileID)
+        clearProfileStore()
+    }
+
+    func testProfileStore_enabled_falseByDefault() {
+        clearProfileStore()
+        let store = ProfileStore()
+        XCTAssertFalse(store.enabled)
+        clearProfileStore()
+    }
+
+    func testProfileStore_enabled_roundtrip() {
+        clearProfileStore()
+        let store = ProfileStore()
+        store.enabled = true
+        XCTAssertTrue(store.enabled)
+        store.enabled = false
+        XCTAssertFalse(store.enabled)
+        clearProfileStore()
+    }
+
+    func testProfileStore_activeProfile_resolvesByID() {
+        clearProfileStore()
+        let store = ProfileStore()
+        let list = FanProfile.builtIns(fanCount: 1, defaultMaxRPM: 7000)
+        store.saveProfiles(list)
+        store.activeProfileID = list[2].id   // "Balanced"
+        let active = store.activeProfile()
+        XCTAssertEqual(active?.id, list[2].id)
+        XCTAssertEqual(active?.name, "Balanced")
+        clearProfileStore()
+    }
+
+    func testProfileStore_activeProfile_returnsNilWhenIDMissing() {
+        clearProfileStore()
+        let store = ProfileStore()
+        store.saveProfiles(FanProfile.builtIns(fanCount: 1, defaultMaxRPM: 7000))
+        store.activeProfileID = UUID()  // doesn't match any saved profile
+        XCTAssertNil(store.activeProfile())
+        clearProfileStore()
+    }
 }

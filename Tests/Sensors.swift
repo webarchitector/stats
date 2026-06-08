@@ -49,6 +49,32 @@ final class SensorsTests: XCTestCase {
         }
     }
 
+    // MARK: - FanMode.curve (new)
+
+    func testFanMode_curve_rawValueIs100() {
+        XCTAssertEqual(FanMode.curve.rawValue, 100)
+    }
+
+    func testFanMode_curve_notAutomatic() {
+        XCTAssertFalse(FanMode.curve.isAutomatic)
+    }
+
+    func testFanMode_curve_isStatsControlled() {
+        XCTAssertTrue(FanMode.curve.isStatsControlled)
+    }
+
+    func testFanMode_others_notStatsControlled() {
+        XCTAssertFalse(FanMode.automatic.isStatsControlled)
+        XCTAssertFalse(FanMode.forced.isStatsControlled)
+        XCTAssertFalse(FanMode.auto3.isStatsControlled)
+    }
+
+    func testFanMode_curve_codableRoundtrip() throws {
+        let data = try JSONEncoder().encode(FanMode.curve)
+        let decoded = try JSONDecoder().decode(FanMode.self, from: data)
+        XCTAssertEqual(decoded, .curve)
+    }
+
     // MARK: - Fan.percentage
 
     private func makeFan(value: Double, maxSpeed: Double = 7000) -> Fan {

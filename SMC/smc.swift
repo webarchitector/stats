@@ -47,9 +47,14 @@ public enum FanMode: Int, Codable {
     case automatic = 0
     case forced = 1
     case auto3 = 3
+    case curve = 100
 
     public var isAutomatic: Bool {
         self == .automatic || self == .auto3
+    }
+
+    public var isStatsControlled: Bool {
+        self == .curve
     }
 }
 

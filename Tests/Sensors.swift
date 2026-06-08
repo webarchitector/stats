@@ -395,10 +395,15 @@ final class SensorsTests: XCTestCase {
         }
     }
 
-    func testBuiltIns_driversAreCpuDiodeAndGpuDiode() {
+    func testBuiltIns_driversMatchPlatform() {
+        // Apple Silicon uses synthesized "Hottest CPU"/"Hottest GPU" sensors
+        // (Modules/Sensors/readers.swift); Intel exposes classical TC0D/TG0D SMC keys.
+        let expected: Set<String> = isARM
+            ? ["Hottest CPU", "Hottest GPU"]
+            : ["TC0D", "TG0D"]
         let list = FanProfile.builtIns(fanCount: 1, defaultMaxRPM: 7000)
         for p in list where p.name != "Apple Auto" {
-            XCTAssertEqual(Set(p.drivers.map(\.key)), ["TC0D", "TG0D"], "\(p.name)")
+            XCTAssertEqual(Set(p.drivers.map(\.key)), expected, "\(p.name)")
         }
     }
 
@@ -588,9 +593,14 @@ final class SensorsTests: XCTestCase {
         store.bootstrapIfNeeded(fanCount: 1, defaultMaxRPM: 7000)
         let fake = FakeFanCurveHelper()
         let c = FanCurveController(helper: fake, store: store)
-        // Aggressive profile: at 65°C effective temp → 4200 RPM
-        let snap = makeControllerSnapshot(fans: [makeControllerFan(id: 0)],
-                                          temps: [("TC0D", 65), ("TG0D", 50)])
+        // Aggressive profile drivers are platform-dependent — use whatever the
+        // bootstrap actually wrote so the snapshot's temp keys match.
+        let driverKeys = store.activeProfile()!.drivers.map(\.key)
+        // Aggressive at 65°C effective temp → 4200 RPM
+        let temps = driverKeys.enumerated().map { (i, key) in
+            (key, i == 0 ? 65.0 : 50.0)
+        }
+        let snap = makeControllerSnapshot(fans: [makeControllerFan(id: 0)], temps: temps)
         c.tick(snapshot: snap)
         // First apply should set mode to .forced exactly once
         XCTAssertEqual(fake.modeCalls, [.init(id: 0, mode: FanMode.forced.rawValue)])
@@ -608,8 +618,9 @@ final class SensorsTests: XCTestCase {
         store.bootstrapIfNeeded(fanCount: 1, defaultMaxRPM: 7000)
         let fake = FakeFanCurveHelper()
         let c = FanCurveController(helper: fake, store: store)
+        let driverKeys = store.activeProfile()!.drivers.map(\.key)
         let snap = makeControllerSnapshot(fans: [makeControllerFan(id: 0)],
-                                          temps: [("TC0D", 65)])
+                                          temps: driverKeys.map { ($0, 65.0) })
         c.tick(snapshot: snap)
         fake.reset()
         c.tick(snapshot: snap)

@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Kit
 
 public enum FanCurve {
     /// Piecewise-linear interpolation across `points`.
@@ -54,7 +55,13 @@ extension FanProfile {
         func curve(_ raw: [(Double, Int)]) -> [CurvePoint] {
             raw.map { CurvePoint(tempC: $0.0, rpm: min($0.1, defaultMaxRPM)) }
         }
-        let drivers = [DriverSensor(key: "TC0D"), DriverSensor(key: "TG0D")]
+        // On Apple Silicon, classical SMC keys like TC0D/TG0D don't exist —
+        // temperatures come through IOHIDEvent (see Modules/Sensors/reader.m)
+        // with synthesized "Hottest CPU"/"Hottest GPU" aggregates in readers.swift.
+        // Picking max-of-hottests gives the snappiest curve response on M-series.
+        let drivers: [DriverSensor] = isARM
+            ? [DriverSensor(key: "Hottest CPU"), DriverSensor(key: "Hottest GPU")]
+            : [DriverSensor(key: "TC0D"), DriverSensor(key: "TG0D")]
 
         let quietPts:      [(Double, Int)] = [(50, 1200), (62, 1600), (72, 2400),
                                               (80, 3500), (86, 5000), (90, defaultMaxRPM)]

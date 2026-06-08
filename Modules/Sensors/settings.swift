@@ -21,6 +21,7 @@ internal class Settings: NSStackView, Settings_v {
     private var fanValueState: FanValue = .percentage
     private var fanCtlEnabledState: Bool = false
     private var fanCurveContainer: NSStackView?
+    private var profilePopup: NSPopUpButton?
 
     public var callback: (() -> Void) = {}
     public var HIDcallback: (() -> Void) = {}
@@ -108,6 +109,24 @@ internal class Settings: NSStackView, Settings_v {
         curveContainer.isHidden = !self.fanCtlEnabledState
         self.fanCurveContainer = curveContainer
         self.addArrangedSubview(curveContainer)
+
+        self.reloadProfilePicker()
+        if let popup = self.profilePopup {
+            curveContainer.addArrangedSubview(PreferencesRow(
+                localizedString("Active profile"), component: popup))
+        }
+
+        let duplicateBtn = NSButton(title: localizedString("Duplicate"),
+                                    target: self,
+                                    action: #selector(self.duplicateProfile))
+        let deleteBtn = NSButton(title: localizedString("Delete"),
+                                 target: self,
+                                 action: #selector(self.deleteProfile))
+        let buttonRow = NSStackView(views: [duplicateBtn, deleteBtn])
+        buttonRow.spacing = 8
+        curveContainer.addArrangedSubview(buttonRow)
+
+        self.refreshCurveEditor()
     }
     
     required init?(coder: NSCoder) {
@@ -229,5 +248,62 @@ internal class Settings: NSStackView, Settings_v {
         ProfileStore.shared.enabled = state
         self.fanCurveContainer?.isHidden = !state
         NotificationCenter.default.post(name: .fanControlEnabledChanged, object: nil)
+    }
+
+    private func reloadProfilePicker() {
+        let popup = self.profilePopup ?? NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 200, height: 24))
+        popup.removeAllItems()
+        let profiles = ProfileStore.shared.loadProfiles()
+        for p in profiles {
+            popup.addItem(withTitle: p.name)
+            popup.lastItem?.representedObject = p.id
+        }
+        if let activeID = ProfileStore.shared.activeProfileID,
+           let idx = profiles.firstIndex(where: { $0.id == activeID }) {
+            popup.selectItem(at: idx)
+        }
+        popup.target = self
+        popup.action = #selector(self.profileChanged(_:))
+        self.profilePopup = popup
+    }
+
+    @objc private func profileChanged(_ sender: NSPopUpButton) {
+        guard let id = sender.selectedItem?.representedObject as? UUID else { return }
+        ProfileStore.shared.activeProfileID = id
+        NotificationCenter.default.post(name: .fanProfileChanged, object: nil)
+        self.refreshCurveEditor()
+    }
+
+    private func refreshCurveEditor() {
+        // Populated incrementally in later tasks (points table, drivers checklist, graph).
+    }
+
+    @objc private func duplicateProfile() {
+        var profiles = ProfileStore.shared.loadProfiles()
+        guard let activeID = ProfileStore.shared.activeProfileID,
+              let original = profiles.first(where: { $0.id == activeID }) else { return }
+        var copy = original
+        copy.id = UUID()
+        copy.name = original.name + " (copy)"
+        copy.isBuiltIn = false
+        profiles.append(copy)
+        ProfileStore.shared.saveProfiles(profiles)
+        ProfileStore.shared.activeProfileID = copy.id
+        self.reloadProfilePicker()
+        self.refreshCurveEditor()
+        NotificationCenter.default.post(name: .fanProfileChanged, object: nil)
+    }
+
+    @objc private func deleteProfile() {
+        var profiles = ProfileStore.shared.loadProfiles()
+        guard let activeID = ProfileStore.shared.activeProfileID,
+              let idx = profiles.firstIndex(where: { $0.id == activeID }),
+              !profiles[idx].isBuiltIn else { return }
+        profiles.remove(at: idx)
+        ProfileStore.shared.saveProfiles(profiles)
+        ProfileStore.shared.activeProfileID = profiles.first?.id
+        self.reloadProfilePicker()
+        self.refreshCurveEditor()
+        NotificationCenter.default.post(name: .fanProfileChanged, object: nil)
     }
 }

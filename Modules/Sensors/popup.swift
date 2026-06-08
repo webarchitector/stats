@@ -931,10 +931,18 @@ private class ModeButtons: NSStackView {
     private static let manualTag = "__manual"
     private static let offTag = "__off"
     private static let maxTag = "__max"
-    /// Last representedObject the user successfully committed to (a profile
-    /// UUID or one of the action tags). Used to restore the visual selection
-    /// when an action alert is cancelled.
-    private var lastCommittedTag: String? = nil
+    /// Persisted last action — Manual/Off/Max tag the user picked. When a
+    /// profile is picked, this is cleared (the profile itself is "current
+    /// state of the world" via activeProfileID). When set, takes priority
+    /// over the active profile in `reloadItems` selection.
+    private static let lastActionKey = "fanctl_lastAction"
+    private var lastActionTag: String? {
+        get {
+            let raw = Store.shared.string(key: Self.lastActionKey, defaultValue: "")
+            return raw.isEmpty ? nil : raw
+        }
+        set { Store.shared.set(key: Self.lastActionKey, value: newValue ?? "") }
+    }
 
     public init(frame: NSRect, mode: FanMode) {
         super.init(frame: frame)
@@ -996,9 +1004,10 @@ private class ModeButtons: NSStackView {
         maxItem.representedObject = Self.maxTag
         self.popup.menu?.addItem(maxItem)
 
-        // If the user previously committed to a Manual/Off/Max action, restore
-        // that selection. Otherwise default to the active profile.
-        if let last = self.lastCommittedTag,
+        // Manual/Off/Max selection (if persisted) takes priority over the
+        // active curve profile — that's what the user last chose. Cleared when
+        // a profile is picked.
+        if let last = self.lastActionTag,
            let idx = (0..<self.popup.numberOfItems).first(where: {
                (self.popup.item(at: $0)?.representedObject as? String) == last
            }) {
@@ -1028,7 +1037,7 @@ private class ModeButtons: NSStackView {
         case Self.manualTag:
             self.silentlyActivateAppleAuto()
             self.callback(.forced)
-            self.lastCommittedTag = Self.manualTag
+            self.lastActionTag = Self.manualTag
         case Self.offTag:
             if !Store.shared.bool(key: "Sensors_turnOffFanAlert", defaultValue: false) {
                 let alert = NSAlert()
@@ -1050,11 +1059,11 @@ private class ModeButtons: NSStackView {
             }
             self.silentlyActivateAppleAuto()
             self.off()
-            self.lastCommittedTag = Self.offTag
+            self.lastActionTag = Self.offTag
         case Self.maxTag:
             self.silentlyActivateAppleAuto()
             self.turbo()
-            self.lastCommittedTag = Self.maxTag
+            self.lastActionTag = Self.maxTag
         default:
             if let uuid = UUID(uuidString: raw) {
                 ProfileStore.shared.activeProfileID = uuid
@@ -1062,10 +1071,9 @@ private class ModeButtons: NSStackView {
                 // Hide the slider — FanView observes callback(.automatic) for this.
                 // Controller's next tick will assert .forced under the new curve.
                 self.callback(.automatic)
-                // Curve profile is "current state of the world" — drop any
-                // remembered Manual/Off/Max so future reloadItems shows the
-                // profile rather than the last action.
-                self.lastCommittedTag = nil
+                // Curve profile becomes the current state — drop any remembered
+                // Manual/Off/Max so reloadItems shows the profile, not the action.
+                self.lastActionTag = nil
             }
         }
         self.applyHighlight()

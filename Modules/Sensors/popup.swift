@@ -954,256 +954,144 @@ internal class FanView: NSStackView {
     }
 }
 
+/// Single popup picker for fan mode. Items are all profiles + "Manual" / "Off" / "Max".
+/// Profiles activate the curve controller; Manual/Off/Max bypass it (controller relinquishes
+/// because we switch the active profile to Apple Auto silently before the manual write).
 private class ModeButtons: NSStackView {
     public var callback: (FanMode) -> Void = {_ in }
     public var turbo: () -> Void = {}
     public var off: () -> Void = {}
 
-    private var fansSyncState: Bool {
-        Store.shared.bool(key: "Sensors_fansSync", defaultValue: false)
-    }
-
-    private var offBtn: NSButton
-    private var autoBtn: NSButton = NSButton(title: localizedString("Automatic"), target: nil, action: #selector(autoMode))
-    private var manualBtn: NSButton = NSButton(title: localizedString("Manual"), target: nil, action: #selector(manualMode))
-    private var turboBtn: NSButton
-    private var profilePopup: NSPopUpButton? = nil
+    private let popup = NSPopUpButton()
+    private static let manualTag = "__manual"
+    private static let offTag = "__off"
+    private static let maxTag = "__max"
 
     public init(frame: NSRect, mode: FanMode) {
-        let turboIcon: NSImage = iconFromSymbol(name: "snowflake", scale: .large)
-        let offIcon: NSImage = iconFromSymbol(name: "fanblades.slash", scale: .medium)
-
-        self.offBtn = NSButton(image: offIcon, target: nil, action: #selector(offMode))
-        self.turboBtn = NSButton(image: turboIcon, target: nil, action: #selector(turboMode))
-
         super.init(frame: frame)
 
         self.orientation = .horizontal
         self.alignment = .centerY
-        self.distribution = .fillProportionally
-        self.spacing = 0
+        self.distribution = .fill
         self.wantsLayer = true
         self.layer?.cornerRadius = 3
-        self.layer?.borderWidth = 1
-        self.layer?.borderColor = NSColor.lightGray.cgColor
 
-        let modes: NSStackView = NSStackView(frame: NSRect(x: 0, y: 0, width: self.frame.width, height: self.frame.height))
-        modes.orientation = .horizontal
-        modes.alignment = .centerY
-        modes.distribution = .fillEqually
+        self.popup.pullsDown = false
+        self.popup.translatesAutoresizingMaskIntoConstraints = false
+        self.popup.target = self
+        self.popup.action = #selector(self.popupChanged(_:))
+        self.addArrangedSubview(self.popup)
 
-        self.autoBtn.setButtonType(.toggle)
-        self.autoBtn.isBordered = false
-        self.autoBtn.target = self
-        self.autoBtn.state = mode.isAutomatic ? .on : .off
+        self.reloadItems()
 
-        self.manualBtn.setButtonType(.toggle)
-        self.manualBtn.isBordered = false
-        self.manualBtn.target = self
-        self.manualBtn.state = mode == .forced ? .on : .off
-
-        // The active profile picker replaces the "Automatic" toggle —
-        // Apple Auto built-in profile is the equivalent of plain firmware auto.
-        let popup = NSPopUpButton()
-        popup.pullsDown = false
-        popup.translatesAutoresizingMaskIntoConstraints = false
-        popup.target = self
-        popup.action = #selector(self.curveProfileSelected(_:))
-        self.profilePopup = popup
-        self.reloadProfilePopup()
-        modes.addArrangedSubview(popup)
-        modes.addArrangedSubview(self.manualBtn)
-        
-        self.offBtn.setButtonType(.toggle)
-        self.offBtn.isBordered = false
-        self.offBtn.target = self
-        
-        self.turboBtn.setButtonType(.toggle)
-        self.turboBtn.isBordered = false
-        self.turboBtn.target = self
-        
-        NSLayoutConstraint.activate([
-            self.offBtn.widthAnchor.constraint(equalToConstant: 26),
-            self.offBtn.heightAnchor.constraint(equalToConstant: self.frame.height),
-            self.turboBtn.widthAnchor.constraint(equalToConstant: 26),
-            self.turboBtn.heightAnchor.constraint(equalToConstant: self.frame.height),
-            modes.heightAnchor.constraint(equalToConstant: self.frame.height)
-        ])
-        
-        self.addArrangedSubview(modes)
-        self.addArrangedSubview(self.offBtn)
-        self.addArrangedSubview(self.turboBtn)
-        
-        NotificationCenter.default.addObserver(self, selector: #selector(syncFanMode), name: .syncFansControl, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(self.externalProfileChanged),
+            name: .fanProfileChanged, object: nil)
     }
-    
+
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-    
+
     deinit {
         NotificationCenter.default.removeObserver(self)
     }
-    
-    @objc private func autoMode(_ sender: NSButton) {
-        if sender.state.rawValue == 0 {
-            self.autoBtn.state = .on
-            return
-        }
-        
-        self.manualBtn.state = .off
-        self.offBtn.state = .off
-        self.turboBtn.state = .off
-        self.callback(.automatic)
-        
-        NotificationCenter.default.post(name: .syncFansControl, object: nil, userInfo: ["mode": "automatic"])
-        NotificationCenter.default.post(name: .checkFanModes, object: nil)
-    }
-    
-    @objc private func manualMode(_ sender: NSButton) {
-        if sender.state.rawValue == 0 {
-            self.manualBtn.state = .on
-            return
-        }
 
-        self.autoBtn.state = .off
-        self.offBtn.state = .off
-        self.turboBtn.state = .off
-        self.applyPickerHighlight()
-        self.callback(.forced)
+    public func reloadProfilePopup() { self.reloadItems() }
 
-        NotificationCenter.default.post(name: .syncFansControl, object: nil, userInfo: ["mode": "forced"])
-    }
-    
-    @objc private func offMode(_ sender: NSButton) {
-        if sender.state.rawValue == 0 {
-            self.offBtn.state = .on
-            return
-        }
-        
-        if !Store.shared.bool(key: "Sensors_turnOffFanAlert", defaultValue: false) {
-            let alert = NSAlert()
-            alert.messageText = localizedString("Turn off fan")
-            alert.informativeText = localizedString("You are going to turn off the fan. This is not recommended action that can damage your mac, are you sure you want to do that?")
-            alert.showsSuppressionButton = true
-            alert.addButton(withTitle: localizedString("Turn off"))
-            alert.addButton(withTitle: localizedString("Cancel"))
-            
-            if alert.runModal() == .alertFirstButtonReturn {
-                if let suppressionButton = alert.suppressionButton, suppressionButton.state == .on {
-                    Store.shared.set(key: "Sensors_turnOffFanAlert", value: true)
-                }
-                self.toggleOffMode(sender)
-            } else {
-                self.offBtn.state = .off
-            }
-        } else {
-            self.toggleOffMode(sender)
-        }
-    }
-    
-    private func toggleOffMode(_ sender: NSButton) {
-        self.manualBtn.state = .off
-        self.autoBtn.state = .off
-        self.offBtn.state = .on
-        self.turboBtn.state = .off
-        self.applyPickerHighlight()
-        self.off()
-
-        if sender.tag != 4 {
-            NotificationCenter.default.post(name: .syncFansControl, object: nil, userInfo: ["mode": "off"])
-        }
-    }
-
-    @objc private func turboMode(_ sender: NSButton) {
-        if sender.state.rawValue == 0 {
-            self.turboBtn.state = .on
-            return
-        }
-
-        self.manualBtn.state = .off
-        self.autoBtn.state = .off
-        self.offBtn.state = .off
-        self.turboBtn.state = .on
-        self.applyPickerHighlight()
-        self.turbo()
-        
-        if sender.tag != 4 {
-            NotificationCenter.default.post(name: .syncFansControl, object: nil, userInfo: ["mode": "turbo"])
-        }
-    }
-    
-    @objc private func syncFanMode(_ notification: Notification) {
-        guard let mode = notification.userInfo?["mode"] as? String, self.fansSyncState else {
-            return
-        }
-        
-        if mode == "automatic" {
-            self.setMode(.automatic)
-        } else if mode == "forced" {
-            self.setMode(.forced)
-        } else if mode == "off" {
-            let btn = NSButton()
-            btn.state = .on
-            btn.tag = 4
-            self.offMode(btn)
-        } else if mode == "turbo" {
-            let btn = NSButton()
-            btn.state = .on
-            btn.tag = 4
-            self.turboMode(btn)
-        }
-    }
-    
     public func setMode(_ mode: FanMode) {
-        if mode.isAutomatic {
-            self.autoBtn.state = .on
-            self.manualBtn.state = .off
-            self.offBtn.state = .off
-            self.turboBtn.state = .off
-            self.callback(.automatic)
-        } else if mode == .forced {
-            self.manualBtn.state = .on
-            self.autoBtn.state = .off
-            self.offBtn.state = .off
-            self.turboBtn.state = .off
-            self.callback(.forced)
-        }
+        // Compatibility no-op — selection state is driven by user clicks and
+        // `.fanProfileChanged` notifications, not by raw SMC mode changes.
     }
 
-    public func reloadProfilePopup() {
-        guard let popup = self.profilePopup else { return }
-        popup.removeAllItems()
+    @objc private func externalProfileChanged() {
+        self.reloadItems()
+    }
+
+    private func reloadItems() {
+        self.popup.removeAllItems()
         let profiles = ProfileStore.shared.loadProfiles()
         for p in profiles {
-            popup.addItem(withTitle: p.name)
-            popup.lastItem?.representedObject = p.id
+            self.popup.addItem(withTitle: p.name)
+            self.popup.lastItem?.representedObject = p.id.uuidString
         }
+        if !profiles.isEmpty {
+            self.popup.menu?.addItem(NSMenuItem.separator())
+        }
+        let manualItem = NSMenuItem(title: localizedString("Manual"), action: nil, keyEquivalent: "")
+        manualItem.representedObject = Self.manualTag
+        self.popup.menu?.addItem(manualItem)
+        let offItem = NSMenuItem(title: localizedString("Off"), action: nil, keyEquivalent: "")
+        offItem.representedObject = Self.offTag
+        self.popup.menu?.addItem(offItem)
+        let maxItem = NSMenuItem(title: localizedString("Max"), action: nil, keyEquivalent: "")
+        maxItem.representedObject = Self.maxTag
+        self.popup.menu?.addItem(maxItem)
+
+        // Select the active profile by default
         if let activeID = ProfileStore.shared.activeProfileID,
            let idx = profiles.firstIndex(where: { $0.id == activeID }) {
-            popup.selectItem(at: idx)
+            self.popup.selectItem(at: idx)
         }
-        self.applyPickerHighlight()
+        self.applyHighlight()
     }
 
-    /// Tint the picker accent-blue when the curve (active profile) is the live
-    /// driver — i.e. when neither Manual, Off, nor Turbo are engaged.
-    private func applyPickerHighlight() {
-        guard let popup = self.profilePopup else { return }
-        let curveActive = (self.manualBtn.state != .on)
-                       && (self.offBtn.state != .on)
-                       && (self.turboBtn.state != .on)
-        popup.contentTintColor = curveActive ? NSColor.controlAccentColor : nil
+    /// Tint the popup accent-blue when a curve profile is the live driver
+    /// (i.e. the selected item is a profile, not Manual/Off/Max).
+    private func applyHighlight() {
+        guard let tag = self.popup.selectedItem?.representedObject as? String else {
+            self.popup.contentTintColor = NSColor.controlAccentColor
+            return
+        }
+        let isAction = (tag == Self.manualTag || tag == Self.offTag || tag == Self.maxTag)
+        self.popup.contentTintColor = isAction ? nil : NSColor.controlAccentColor
     }
 
-    @objc private func curveProfileSelected(_ sender: NSPopUpButton) {
-        guard let id = sender.selectedItem?.representedObject as? UUID else { return }
-        ProfileStore.shared.activeProfileID = id
-        // Picking a profile means the curve takes over — clear manual/off/turbo states.
-        self.manualBtn.state = .off
-        self.offBtn.state = .off
-        self.turboBtn.state = .off
-        self.applyPickerHighlight()
-        NotificationCenter.default.post(name: .fanProfileChanged, object: nil)
+    @objc private func popupChanged(_ sender: NSPopUpButton) {
+        guard let item = sender.selectedItem,
+              let raw = item.representedObject as? String else { return }
+        switch raw {
+        case Self.manualTag:
+            self.silentlyActivateAppleAuto()
+            self.callback(.forced)
+        case Self.offTag:
+            if !Store.shared.bool(key: "Sensors_turnOffFanAlert", defaultValue: false) {
+                let alert = NSAlert()
+                alert.messageText = localizedString("Turn off fan")
+                alert.informativeText = localizedString("You are going to turn off the fan. This is not recommended action that can damage your mac, are you sure you want to do that?")
+                alert.showsSuppressionButton = true
+                alert.addButton(withTitle: localizedString("Turn off"))
+                alert.addButton(withTitle: localizedString("Cancel"))
+                if alert.runModal() != .alertFirstButtonReturn {
+                    self.reloadItems()  // revert visual selection back to active profile
+                    return
+                }
+                if let s = alert.suppressionButton, s.state == .on {
+                    Store.shared.set(key: "Sensors_turnOffFanAlert", value: true)
+                }
+            }
+            self.silentlyActivateAppleAuto()
+            self.off()
+        case Self.maxTag:
+            self.silentlyActivateAppleAuto()
+            self.turbo()
+        default:
+            if let uuid = UUID(uuidString: raw) {
+                ProfileStore.shared.activeProfileID = uuid
+                NotificationCenter.default.post(name: .fanProfileChanged, object: nil)
+                // Hide the slider — FanView observes callback(.automatic) for this.
+                // Controller's next tick will assert .forced under the new curve.
+                self.callback(.automatic)
+            }
+        }
+        self.applyHighlight()
+    }
+
+    /// Switch active profile to "Apple Auto" (empty points) silently — controller
+    /// relinquishes on its next tick so direct SMC writes from Manual/Off/Max stick.
+    private func silentlyActivateAppleAuto() {
+        let profiles = ProfileStore.shared.loadProfiles()
+        if let auto = profiles.first(where: { $0.name == "Apple Auto" }) {
+            ProfileStore.shared.activeProfileID = auto.id
+        }
     }
 }

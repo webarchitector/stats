@@ -1065,12 +1065,13 @@ private class ModeButtons: NSStackView {
             self.manualBtn.state = .on
             return
         }
-        
+
         self.autoBtn.state = .off
         self.offBtn.state = .off
         self.turboBtn.state = .off
+        self.applyPickerHighlight()
         self.callback(.forced)
-        
+
         NotificationCenter.default.post(name: .syncFansControl, object: nil, userInfo: ["mode": "forced"])
     }
     
@@ -1106,23 +1107,25 @@ private class ModeButtons: NSStackView {
         self.autoBtn.state = .off
         self.offBtn.state = .on
         self.turboBtn.state = .off
+        self.applyPickerHighlight()
         self.off()
-        
+
         if sender.tag != 4 {
             NotificationCenter.default.post(name: .syncFansControl, object: nil, userInfo: ["mode": "off"])
         }
     }
-    
+
     @objc private func turboMode(_ sender: NSButton) {
         if sender.state.rawValue == 0 {
             self.turboBtn.state = .on
             return
         }
-        
+
         self.manualBtn.state = .off
         self.autoBtn.state = .off
         self.offBtn.state = .off
         self.turboBtn.state = .on
+        self.applyPickerHighlight()
         self.turbo()
         
         if sender.tag != 4 {
@@ -1180,11 +1183,27 @@ private class ModeButtons: NSStackView {
            let idx = profiles.firstIndex(where: { $0.id == activeID }) {
             popup.selectItem(at: idx)
         }
+        self.applyPickerHighlight()
+    }
+
+    /// Tint the picker accent-blue when the curve (active profile) is the live
+    /// driver — i.e. when neither Manual, Off, nor Turbo are engaged.
+    private func applyPickerHighlight() {
+        guard let popup = self.profilePopup else { return }
+        let curveActive = (self.manualBtn.state != .on)
+                       && (self.offBtn.state != .on)
+                       && (self.turboBtn.state != .on)
+        popup.contentTintColor = curveActive ? NSColor.controlAccentColor : nil
     }
 
     @objc private func curveProfileSelected(_ sender: NSPopUpButton) {
         guard let id = sender.selectedItem?.representedObject as? UUID else { return }
         ProfileStore.shared.activeProfileID = id
+        // Picking a profile means the curve takes over — clear manual/off/turbo states.
+        self.manualBtn.state = .off
+        self.offBtn.state = .off
+        self.turboBtn.state = .off
+        self.applyPickerHighlight()
         NotificationCenter.default.post(name: .fanProfileChanged, object: nil)
     }
 }

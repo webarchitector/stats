@@ -120,7 +120,8 @@ public class Sensors: Module {
     /// Crash recovery: any fan whose stored customMode is .curve but where Stats is no
     /// longer enabled or has no active profile gets reset to automatic to avoid stuck
     /// forced RPM on the hardware.
-    private static func resetStaleCurveModes(helper: FanCurveHelper, store: ProfileStore) {
+    /// `internal` (not `private`) so tests using `@testable import Sensors` can call it.
+    internal static func resetStaleCurveModes(helper: FanCurveHelper, store: ProfileStore) {
         guard helper.isActive() else { return }
         for id in 0...3 {
             let key = "fan_\(id)_mode"

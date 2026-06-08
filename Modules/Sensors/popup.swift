@@ -931,6 +931,10 @@ private class ModeButtons: NSStackView {
     private static let manualTag = "__manual"
     private static let offTag = "__off"
     private static let maxTag = "__max"
+    /// Last representedObject the user successfully committed to (a profile
+    /// UUID or one of the action tags). Used to restore the visual selection
+    /// when an action alert is cancelled.
+    private var lastCommittedTag: String? = nil
 
     public init(frame: NSRect, mode: FanMode) {
         super.init(frame: frame)
@@ -992,9 +996,15 @@ private class ModeButtons: NSStackView {
         maxItem.representedObject = Self.maxTag
         self.popup.menu?.addItem(maxItem)
 
-        // Select the active profile by default
-        if let activeID = ProfileStore.shared.activeProfileID,
-           let idx = profiles.firstIndex(where: { $0.id == activeID }) {
+        // If the user previously committed to a Manual/Off/Max action, restore
+        // that selection. Otherwise default to the active profile.
+        if let last = self.lastCommittedTag,
+           let idx = (0..<self.popup.numberOfItems).first(where: {
+               (self.popup.item(at: $0)?.representedObject as? String) == last
+           }) {
+            self.popup.selectItem(at: idx)
+        } else if let activeID = ProfileStore.shared.activeProfileID,
+                  let idx = profiles.firstIndex(where: { $0.id == activeID }) {
             self.popup.selectItem(at: idx)
         }
         self.applyHighlight()
@@ -1018,6 +1028,7 @@ private class ModeButtons: NSStackView {
         case Self.manualTag:
             self.silentlyActivateAppleAuto()
             self.callback(.forced)
+            self.lastCommittedTag = Self.manualTag
         case Self.offTag:
             if !Store.shared.bool(key: "Sensors_turnOffFanAlert", defaultValue: false) {
                 let alert = NSAlert()
@@ -1027,7 +1038,10 @@ private class ModeButtons: NSStackView {
                 alert.addButton(withTitle: localizedString("Turn off"))
                 alert.addButton(withTitle: localizedString("Cancel"))
                 if alert.runModal() != .alertFirstButtonReturn {
-                    self.reloadItems()  // revert visual selection back to active profile
+                    // User cancelled — restore the previous selection rather
+                    // than dropping to "active profile" (would silently lose
+                    // their Manual/Max indication if that's where they were).
+                    self.reloadItems()
                     return
                 }
                 if let s = alert.suppressionButton, s.state == .on {
@@ -1036,9 +1050,11 @@ private class ModeButtons: NSStackView {
             }
             self.silentlyActivateAppleAuto()
             self.off()
+            self.lastCommittedTag = Self.offTag
         case Self.maxTag:
             self.silentlyActivateAppleAuto()
             self.turbo()
+            self.lastCommittedTag = Self.maxTag
         default:
             if let uuid = UUID(uuidString: raw) {
                 ProfileStore.shared.activeProfileID = uuid
@@ -1046,6 +1062,10 @@ private class ModeButtons: NSStackView {
                 // Hide the slider — FanView observes callback(.automatic) for this.
                 // Controller's next tick will assert .forced under the new curve.
                 self.callback(.automatic)
+                // Curve profile is "current state of the world" — drop any
+                // remembered Manual/Off/Max so future reloadItems shows the
+                // profile rather than the last action.
+                self.lastCommittedTag = nil
             }
         }
         self.applyHighlight()

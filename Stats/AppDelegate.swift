@@ -144,10 +144,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         for peer in peers {
             // If a peer launched after us, it's the user's intent — defer to it.
             // Otherwise force-quit the older peer; user wants the newest binary.
+            // Tie-break (identical launchDate, sub-millisecond race): lower PID
+            // wins so both processes deterministically agree on who survives.
             if let peerLaunch = peer.launchDate,
-               let myLaunch = me.launchDate,
-               peerLaunch > myLaunch {
-                shouldExitSelf = true
+               let myLaunch = me.launchDate {
+                if peerLaunch > myLaunch {
+                    shouldExitSelf = true
+                } else if peerLaunch == myLaunch && peer.processIdentifier < myPID {
+                    shouldExitSelf = true
+                } else {
+                    peer.forceTerminate()
+                }
             } else {
                 peer.forceTerminate()
             }

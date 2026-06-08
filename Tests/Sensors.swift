@@ -954,6 +954,71 @@ final class SensorsTests: XCTestCase {
         clearProfileStore()
     }
 
+    // MARK: - Crash recovery (Sensors.resetStaleCurveModes)
+
+    func testResetStale_helperInactive_doesNothing() {
+        clearProfileStore()
+        Store.shared.set(key: "fan_0_mode", value: FanMode.curve.rawValue)
+        let fake = FakeFanCurveHelper()
+        fake.isActiveValue = false
+        Sensors.resetStaleCurveModes(helper: fake, store: ProfileStore())
+        XCTAssertEqual(fake.modeCalls.count, 0, "no helper → no SMC writes")
+        // Stored fan_0_mode is left as-is for next launch to retry.
+        XCTAssertEqual(Store.shared.int(key: "fan_0_mode", defaultValue: -1),
+                       FanMode.curve.rawValue)
+        clearProfileStore()
+    }
+
+    func testResetStale_noActiveProfile_resetsCurveFan() {
+        clearProfileStore()
+        Store.shared.set(key: "fan_0_mode", value: FanMode.curve.rawValue)
+        Store.shared.set(key: "fan_1_mode", value: FanMode.curve.rawValue)
+        let fake = FakeFanCurveHelper()
+        // No active profile → all .curve fans should be reset.
+        Sensors.resetStaleCurveModes(helper: fake, store: ProfileStore())
+        // Iteration order is 0..3 deterministic.
+        XCTAssertEqual(fake.modeCalls, [
+            .init(id: 0, mode: FanMode.automatic.rawValue),
+            .init(id: 1, mode: FanMode.automatic.rawValue),
+        ])
+        XCTAssertEqual(Store.shared.int(key: "fan_0_mode", defaultValue: -1),
+                       FanMode.automatic.rawValue)
+        XCTAssertEqual(Store.shared.int(key: "fan_1_mode", defaultValue: -1),
+                       FanMode.automatic.rawValue)
+        clearProfileStore()
+    }
+
+    func testResetStale_withActiveProfile_leavesCurveFanAlone() {
+        clearProfileStore()
+        // Populate active profile.
+        let store = ProfileStore()
+        let p = FanProfile(name: "P", drivers: [DriverSensor(key: "TC0D")],
+            points: [CurvePoint(tempC: 30, rpm: 1000), CurvePoint(tempC: 80, rpm: 6000)])
+        store.saveProfiles([p])
+        store.activeProfileID = p.id
+        Store.shared.set(key: "fan_0_mode", value: FanMode.curve.rawValue)
+        let fake = FakeFanCurveHelper()
+        Sensors.resetStaleCurveModes(helper: fake, store: store)
+        // Stats is still managing this fan via active profile — don't touch it.
+        XCTAssertEqual(fake.modeCalls.count, 0,
+                       "active profile present → controller will re-take fan, no reset needed")
+        XCTAssertEqual(Store.shared.int(key: "fan_0_mode", defaultValue: -1),
+                       FanMode.curve.rawValue)
+        clearProfileStore()
+    }
+
+    func testResetStale_nonCurveMode_isIgnored() {
+        clearProfileStore()
+        // User-forced fan (Manual/Off/Max) — leave alone.
+        Store.shared.set(key: "fan_0_mode", value: FanMode.forced.rawValue)
+        let fake = FakeFanCurveHelper()
+        Sensors.resetStaleCurveModes(helper: fake, store: ProfileStore())
+        XCTAssertEqual(fake.modeCalls.count, 0, "only .curve mode is crash-recovered")
+        XCTAssertEqual(Store.shared.int(key: "fan_0_mode", defaultValue: -1),
+                       FanMode.forced.rawValue)
+        clearProfileStore()
+    }
+
     // MARK: - Audit fixes (managed-fans cleanup, user takeover, helper drop)
 
     func testController_userTakeoverViaCustomMode_yieldsFan() {

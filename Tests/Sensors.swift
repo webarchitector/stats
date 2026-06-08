@@ -808,4 +808,51 @@ final class SensorsTests: XCTestCase {
             [.init(id: 0, mode: FanMode.automatic.rawValue)])
         clearProfileStore()
     }
+
+    // MARK: - Controller sleep/wake
+
+    func testController_sleep_relinquishesAndBlocksTicks() {
+        clearProfileStore()
+        let active = FanProfile(name: "Linear",
+            drivers: [DriverSensor(key: "TC0D")],
+            points: [CurvePoint(tempC: 30, rpm: 1000), CurvePoint(tempC: 80, rpm: 6000)],
+            fanOffsetRPM: 0)
+        let store = enabledStoreWithCustomProfile(active)
+        let fake = FakeFanCurveHelper()
+        let c = FanCurveController(helper: fake, store: store)
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0)], temps: [("TC0D", 60)]))
+        fake.reset()
+        c.handleWillSleepForTests()
+        XCTAssertEqual(fake.modeCalls,
+            [.init(id: 0, mode: FanMode.automatic.rawValue)])
+        fake.reset()
+        // Ticks during sleep are no-ops
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0)], temps: [("TC0D", 75)]))
+        XCTAssertEqual(fake.modeCalls.count, 0)
+        XCTAssertEqual(fake.speedCalls.count, 0)
+        clearProfileStore()
+    }
+
+    func testController_wake_resumesOnNextTick() {
+        clearProfileStore()
+        let active = FanProfile(name: "Linear",
+            drivers: [DriverSensor(key: "TC0D")],
+            points: [CurvePoint(tempC: 30, rpm: 1000), CurvePoint(tempC: 80, rpm: 6000)],
+            fanOffsetRPM: 0)
+        let store = enabledStoreWithCustomProfile(active)
+        let fake = FakeFanCurveHelper()
+        let c = FanCurveController(helper: fake, store: store)
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0)], temps: [("TC0D", 60)]))
+        c.handleWillSleepForTests()
+        fake.reset()
+        c.handleDidWakeForTests()
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0)], temps: [("TC0D", 60)]))
+        XCTAssertTrue(fake.modeCalls.contains(.init(id: 0, mode: FanMode.forced.rawValue)))
+        XCTAssertEqual(fake.speedCalls.count, 1)
+        clearProfileStore()
+    }
 }

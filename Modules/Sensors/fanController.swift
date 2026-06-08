@@ -41,11 +41,41 @@ public final class FanCurveController {
     private var lastApplied: [Int: Int] = [:]
     private var lastTempForHyst: [Int: Double] = [:]
     private var isAsleep: Bool = false
+    private var observers: [(NotificationCenter, NSObjectProtocol)] = []
 
     public init(helper: FanCurveHelper, store: ProfileStore) {
         self.helper = helper
         self.store = store
+        let workspaceNC = NSWorkspace.shared.notificationCenter
+        observers.append((workspaceNC, workspaceNC.addObserver(
+            forName: NSWorkspace.willSleepNotification,
+            object: nil, queue: .main) { [weak self] _ in
+            self?.handleWillSleep()
+        }))
+        observers.append((workspaceNC, workspaceNC.addObserver(
+            forName: NSWorkspace.didWakeNotification,
+            object: nil, queue: .main) { [weak self] _ in
+            self?.handleDidWake()
+        }))
     }
+
+    deinit {
+        for (center, token) in observers { center.removeObserver(token) }
+    }
+
+    private func handleWillSleep() {
+        isAsleep = true
+        relinquish()
+    }
+
+    private func handleDidWake() {
+        isAsleep = false
+    }
+
+    #if DEBUG
+    public func handleWillSleepForTests() { handleWillSleep() }
+    public func handleDidWakeForTests() { handleDidWake() }
+    #endif
 
     public func tick(snapshot: Sensors_List?) {
         guard !isAsleep,

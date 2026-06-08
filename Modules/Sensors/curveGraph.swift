@@ -31,7 +31,8 @@ public final class CurveGraphView: NSView {
         ctx.setLineWidth(2)
         ctx.beginPath()
         for (i, pt) in points.enumerated() {
-            let x = rect.minX + CGFloat((pt.tempC - tempLo) / tempSpan) * rect.width
+            let xRatio = min(max(0, (pt.tempC - tempLo) / tempSpan), 1)
+            let x = rect.minX + CGFloat(xRatio) * rect.width
             let y = rect.minY + CGFloat(pt.rpm) * yScale
             if i == 0 { ctx.move(to: CGPoint(x: x, y: y)) }
             else      { ctx.addLine(to: CGPoint(x: x, y: y)) }
@@ -40,7 +41,8 @@ public final class CurveGraphView: NSView {
 
         ctx.setFillColor(NSColor.systemBlue.cgColor)
         for pt in points {
-            let x = rect.minX + CGFloat((pt.tempC - tempLo) / tempSpan) * rect.width
+            let xRatio = min(max(0, (pt.tempC - tempLo) / tempSpan), 1)
+            let x = rect.minX + CGFloat(xRatio) * rect.width
             let y = rect.minY + CGFloat(pt.rpm) * yScale
             ctx.fillEllipse(in: CGRect(x: x-3, y: y-3, width: 6, height: 6))
         }

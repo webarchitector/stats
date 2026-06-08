@@ -27,9 +27,11 @@ internal class Settings: NSStackView, Settings_v {
     private var driversTable: NSTableView?
     private let driversDataSource = DriversTable()
     private var offsetField: NSTextField?
+    private var offsetRow: PreferencesRow?
     private var hysteresisField: NSTextField?
     private var thresholdField: NSTextField?
     private var graphView: CurveGraphView?
+    private var deleteBtn: NSButton?
 
     public var callback: (() -> Void) = {}
     public var HIDcallback: (() -> Void) = {}
@@ -130,6 +132,7 @@ internal class Settings: NSStackView, Settings_v {
         let deleteBtn = NSButton(title: localizedString("Delete"),
                                  target: self,
                                  action: #selector(self.deleteProfile))
+        self.deleteBtn = deleteBtn
         let buttonRow = NSStackView(views: [duplicateBtn, deleteBtn])
         buttonRow.spacing = 8
         curveContainer.addArrangedSubview(buttonRow)
@@ -185,16 +188,16 @@ internal class Settings: NSStackView, Settings_v {
         self.driversTable = driversTableView
         curveContainer.addArrangedSubview(driverScroll)
 
-        let fanCount = self.list.compactMap { $0 as? Fan }.count
-        if fanCount >= 2 {
-            let offset = NSTextField()
-            offset.target = self
-            offset.action = #selector(self.commitOffset(_:))
-            offset.stringValue = String(ProfileStore.shared.activeProfile()?.fanOffsetRPM ?? 50)
-            self.offsetField = offset
-            curveContainer.addArrangedSubview(PreferencesRow(
-                localizedString("Fan 1 offset (RPM)"), component: offset))
-        }
+        let offset = NSTextField()
+        offset.target = self
+        offset.action = #selector(self.commitOffset(_:))
+        offset.stringValue = String(ProfileStore.shared.activeProfile()?.fanOffsetRPM ?? 50)
+        self.offsetField = offset
+        let offsetRow = PreferencesRow(
+            localizedString("Secondary fan offset (RPM)"), component: offset)
+        offsetRow.isHidden = self.list.compactMap({ $0 as? Fan }).count < 2
+        self.offsetRow = offsetRow
+        curveContainer.addArrangedSubview(offsetRow)
 
         let advancedBox = NSBox()
         advancedBox.title = localizedString("Advanced")
@@ -290,6 +293,7 @@ internal class Settings: NSStackView, Settings_v {
         self.list = self.unknownSensorsState ? list : list.filter({ $0.group != .unknown })
         self.load(widgets: [])
         self.refreshDriversChecklist()
+        self.offsetRow?.isHidden = self.list.compactMap({ $0 as? Fan }).count < 2
     }
     
     @objc private func toggleSensor(_ sender: NSControl) {
@@ -359,6 +363,7 @@ internal class Settings: NSStackView, Settings_v {
         popup.target = self
         popup.action = #selector(self.profileChanged(_:))
         self.profilePopup = popup
+        self.deleteBtn?.isEnabled = !(ProfileStore.shared.activeProfile()?.isBuiltIn ?? true)
     }
 
     @objc private func profileChanged(_ sender: NSPopUpButton) {
@@ -366,6 +371,7 @@ internal class Settings: NSStackView, Settings_v {
         ProfileStore.shared.activeProfileID = id
         NotificationCenter.default.post(name: .fanProfileChanged, object: nil)
         self.refreshCurveEditor()
+        self.deleteBtn?.isEnabled = !(ProfileStore.shared.activeProfile()?.isBuiltIn ?? true)
     }
 
     private func refreshCurveEditor() {

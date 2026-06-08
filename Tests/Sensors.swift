@@ -615,4 +615,104 @@ final class SensorsTests: XCTestCase {
         c.tick(snapshot: snap)
         XCTAssertEqual(fake.modeCalls.count, 0, "mode should not be re-set on every tick")
     }
+
+    // MARK: - Controller hysteresis & throttle
+
+    private func enabledStoreWithCustomProfile(_ profile: FanProfile) -> ProfileStore {
+        let store = ProfileStore()
+        store.enabled = true
+        store.saveProfiles([profile])
+        store.activeProfileID = profile.id
+        return store
+    }
+
+    private let linearProfile = FanProfile(
+        name: "Linear",
+        drivers: [DriverSensor(key: "TC0D")],
+        points: [CurvePoint(tempC: 30, rpm: 1000),
+                 CurvePoint(tempC: 80, rpm: 6000)],
+        fanOffsetRPM: 0, hysteresisC: 2.0, deltaRpmThreshold: 200)
+
+    func testController_throttle_skipsApplyWhenDeltaUnderThreshold() {
+        clearProfileStore()
+        let store = enabledStoreWithCustomProfile(linearProfile)
+        let fake = FakeFanCurveHelper()
+        let c = FanCurveController(helper: fake, store: store)
+        // temp=55 → rpm=3500, temp=55.5 → rpm=3550 (delta=50 < threshold=200)
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0)], temps: [("TC0D", 55)]))
+        XCTAssertEqual(fake.speedCalls.count, 1)
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0)], temps: [("TC0D", 55.5)]))
+        XCTAssertEqual(fake.speedCalls.count, 1, "delta < threshold should suppress")
+        clearProfileStore()
+    }
+
+    func testController_throttle_appliesPastThreshold() {
+        clearProfileStore()
+        let store = enabledStoreWithCustomProfile(linearProfile)
+        let fake = FakeFanCurveHelper()
+        let c = FanCurveController(helper: fake, store: store)
+        // temp=55 → 3500, temp=60 → 4000 (delta=500 ≥ threshold)
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0)], temps: [("TC0D", 55)]))
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0)], temps: [("TC0D", 60)]))
+        XCTAssertEqual(fake.speedCalls.map(\.rpm), [3500, 4000])
+        clearProfileStore()
+    }
+
+    func testController_hysteresis_blocksLoweringInsideBand() {
+        clearProfileStore()
+        let p = FanProfile(name: "Hyst",
+            drivers: [DriverSensor(key: "TC0D")],
+            points: [CurvePoint(tempC: 30, rpm: 1000), CurvePoint(tempC: 80, rpm: 6000)],
+            fanOffsetRPM: 0, hysteresisC: 5.0, deltaRpmThreshold: 100)
+        let store = enabledStoreWithCustomProfile(p)
+        let fake = FakeFanCurveHelper()
+        let c = FanCurveController(helper: fake, store: store)
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0)], temps: [("TC0D", 70)]))
+        // tempDrop=3 < hyst=5 → suppress even though delta=300 ≥ thresh=100
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0)], temps: [("TC0D", 67)]))
+        XCTAssertEqual(fake.speedCalls.count, 1, "hysteresis should block lowering")
+        clearProfileStore()
+    }
+
+    func testController_hysteresis_allowsLoweringPastBand() {
+        clearProfileStore()
+        let p = FanProfile(name: "Hyst",
+            drivers: [DriverSensor(key: "TC0D")],
+            points: [CurvePoint(tempC: 30, rpm: 1000), CurvePoint(tempC: 80, rpm: 6000)],
+            fanOffsetRPM: 0, hysteresisC: 5.0, deltaRpmThreshold: 100)
+        let store = enabledStoreWithCustomProfile(p)
+        let fake = FakeFanCurveHelper()
+        let c = FanCurveController(helper: fake, store: store)
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0)], temps: [("TC0D", 70)]))
+        // tempDrop=6 > hyst=5 → allow
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0)], temps: [("TC0D", 64)]))
+        XCTAssertEqual(fake.speedCalls.count, 2)
+        clearProfileStore()
+    }
+
+    func testController_hysteresis_doesNotBlockRaising() {
+        clearProfileStore()
+        let p = FanProfile(name: "Hyst",
+            drivers: [DriverSensor(key: "TC0D")],
+            points: [CurvePoint(tempC: 30, rpm: 1000), CurvePoint(tempC: 80, rpm: 6000)],
+            fanOffsetRPM: 0, hysteresisC: 5.0, deltaRpmThreshold: 100)
+        let store = enabledStoreWithCustomProfile(p)
+        let fake = FakeFanCurveHelper()
+        let c = FanCurveController(helper: fake, store: store)
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0)], temps: [("TC0D", 50)]))
+        // small temp rise +2°C inside hyst band; raising always allowed past threshold
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0)], temps: [("TC0D", 52)]))
+        XCTAssertEqual(fake.speedCalls.count, 2)
+        clearProfileStore()
+    }
 }

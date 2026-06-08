@@ -79,7 +79,19 @@ public final class FanCurveController {
             helper.setFanMode(id: fan.id, mode: FanMode.forced.rawValue)
             managedFans.insert(fan.id)
         }
-        // basic apply (no hysteresis / no delta-throttle yet — Task 4.3)
+        let last = lastApplied[fan.id]
+        let lastTemp = lastTempForHyst[fan.id] ?? -.greatestFiniteMagnitude
+
+        if let last = last {
+            let isLowering = target < last
+            if isLowering && (lastTemp - temp) < hysteresisC {
+                return
+            }
+            if abs(target - last) < deltaThreshold {
+                return
+            }
+        }
+
         helper.setFanSpeed(id: fan.id, value: target)
         lastApplied[fan.id] = target
         lastTempForHyst[fan.id] = temp

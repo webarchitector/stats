@@ -1021,8 +1021,9 @@ private class ModeButtons: NSStackView {
         // profile picker. The active profile *is* the Automatic source.
         let curvesEnabled = ProfileStore.shared.enabled
         if curvesEnabled {
-            let popup = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 0, height: self.frame.height))
-            popup.isBordered = false
+            let popup = NSPopUpButton()
+            popup.pullsDown = false
+            popup.translatesAutoresizingMaskIntoConstraints = false
             popup.target = self
             popup.action = #selector(self.curveProfileSelected(_:))
             self.profilePopup = popup

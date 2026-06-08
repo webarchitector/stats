@@ -97,6 +97,10 @@ public final class FanCurveController {
         lastTempForHyst[fan.id] = temp
     }
 
+    public func shutdown() {
+        relinquish()
+    }
+
     private func relinquish() {
         for id in managedFans {
             helper.setFanMode(id: id, mode: FanMode.automatic.rawValue)

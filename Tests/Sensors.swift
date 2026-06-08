@@ -756,4 +756,56 @@ final class SensorsTests: XCTestCase {
         XCTAssertEqual(fan1Rpm, 5800)
         clearProfileStore()
     }
+
+    // MARK: - Controller relinquish
+
+    func testController_emptyPointsProfile_relinquishesManagedFans() {
+        clearProfileStore()
+        let active = FanProfile(name: "Linear",
+            drivers: [DriverSensor(key: "TC0D")],
+            points: [CurvePoint(tempC: 30, rpm: 1000), CurvePoint(tempC: 80, rpm: 6000)],
+            fanOffsetRPM: 0)
+        let store = enabledStoreWithCustomProfile(active)
+        let fake = FakeFanCurveHelper()
+        let c = FanCurveController(helper: fake, store: store)
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0)], temps: [("TC0D", 60)]))
+        // Now swap to an empty-points profile (Apple Auto)
+        let auto = FanProfile(name: "Auto",
+            drivers: [DriverSensor(key: "TC0D")], points: [], fanOffsetRPM: 0)
+        store.saveProfiles([active, auto])
+        store.activeProfileID = auto.id
+        fake.reset()
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0)], temps: [("TC0D", 60)]))
+        XCTAssertEqual(fake.modeCalls,
+            [.init(id: 0, mode: FanMode.automatic.rawValue)])
+        XCTAssertEqual(fake.speedCalls.count, 0)
+        clearProfileStore()
+    }
+
+    func testController_storeDisabled_relinquishesIfPreviouslyManaged() {
+        clearProfileStore()
+        let active = FanProfile(name: "Linear",
+            drivers: [DriverSensor(key: "TC0D")],
+            points: [CurvePoint(tempC: 30, rpm: 1000), CurvePoint(tempC: 80, rpm: 6000)],
+            fanOffsetRPM: 0)
+        let store = enabledStoreWithCustomProfile(active)
+        let fake = FakeFanCurveHelper()
+        let c = FanCurveController(helper: fake, store: store)
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0)], temps: [("TC0D", 60)]))
+        XCTAssertTrue(fake.modeCalls.contains(.init(id: 0, mode: FanMode.forced.rawValue)))
+        // Disable: tick alone bails early without relinquishing
+        store.enabled = false
+        fake.reset()
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0)], temps: [("TC0D", 60)]))
+        XCTAssertEqual(fake.modeCalls.count, 0, "tick should bail when disabled")
+        // Explicit shutdown releases the fans:
+        c.shutdown()
+        XCTAssertEqual(fake.modeCalls,
+            [.init(id: 0, mode: FanMode.automatic.rawValue)])
+        clearProfileStore()
+    }
 }

@@ -40,3 +40,39 @@ extension FanCurve {
         return values.max()
     }
 }
+
+extension FanProfile {
+    /// Generates the canonical 4 built-in profiles for the user's hardware.
+    /// `fanCount` is informational (offset applies regardless when fanCount ≥ 2;
+    /// stored points are identical for 1- and 2-fan profiles).
+    /// `defaultMaxRPM` is used for the top-of-curve points; profile is portable
+    /// (per-fan maxSpeed clamping happens at apply time).
+    public static func builtIns(fanCount: Int, defaultMaxRPM: Int) -> [FanProfile] {
+        func curve(_ raw: [(Double, Int)]) -> [CurvePoint] {
+            raw.map { CurvePoint(tempC: $0.0, rpm: min($0.1, defaultMaxRPM)) }
+        }
+        let drivers = [DriverSensor(key: "TC0D"), DriverSensor(key: "TG0D")]
+
+        let quietPts:      [(Double, Int)] = [(50, 1200), (62, 1600), (72, 2400),
+                                              (80, 3500), (86, 5000), (90, defaultMaxRPM)]
+        let balancedPts:   [(Double, Int)] = [(40, 1300), (52, 1800), (62, 2600),
+                                              (72, 3800), (80, 5200), (86, defaultMaxRPM)]
+        let aggressivePts: [(Double, Int)] = [(35, 1300), (45, 2000), (55, 3000),
+                                              (65, 4200), (72, 5400), (78, defaultMaxRPM)]
+
+        return [
+            FanProfile(name: "Apple Auto", isBuiltIn: true,
+                       drivers: drivers, points: [],
+                       fanOffsetRPM: 50),
+            FanProfile(name: "Quiet", isBuiltIn: true,
+                       drivers: drivers, points: curve(quietPts),
+                       fanOffsetRPM: 50),
+            FanProfile(name: "Balanced", isBuiltIn: true,
+                       drivers: drivers, points: curve(balancedPts),
+                       fanOffsetRPM: 50),
+            FanProfile(name: "Aggressive", isBuiltIn: true,
+                       drivers: drivers, points: curve(aggressivePts),
+                       fanOffsetRPM: 50),
+        ]
+    }
+}

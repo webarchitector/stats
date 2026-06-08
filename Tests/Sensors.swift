@@ -351,4 +351,68 @@ final class SensorsTests: XCTestCase {
                           DriverSensor(key: "MISSING")])
         XCTAssertEqual(r, 60)
     }
+
+    // MARK: - FanProfile.builtIns
+
+    func testBuiltIns_singleFan_hasFourProfiles() {
+        let list = FanProfile.builtIns(fanCount: 1, defaultMaxRPM: 7000)
+        XCTAssertEqual(list.count, 4)
+        XCTAssertEqual(list.map(\.name), ["Apple Auto", "Quiet", "Balanced", "Aggressive"])
+    }
+
+    func testBuiltIns_twoFans_hasSameFourProfiles() {
+        let list = FanProfile.builtIns(fanCount: 2, defaultMaxRPM: 7000)
+        XCTAssertEqual(list.count, 4)
+        XCTAssertEqual(list.map(\.name), ["Apple Auto", "Quiet", "Balanced", "Aggressive"])
+    }
+
+    func testBuiltIns_allMarkedBuiltIn() {
+        let list = FanProfile.builtIns(fanCount: 1, defaultMaxRPM: 7000)
+        for p in list { XCTAssertTrue(p.isBuiltIn, "\(p.name) not marked built-in") }
+    }
+
+    func testBuiltIns_appleAutoHasNoPoints() {
+        let list = FanProfile.builtIns(fanCount: 1, defaultMaxRPM: 7000)
+        let auto = list.first { $0.name == "Apple Auto" }!
+        XCTAssertTrue(auto.points.isEmpty)
+    }
+
+    func testBuiltIns_aggressiveLastPointReachesMax() {
+        let list = FanProfile.builtIns(fanCount: 1, defaultMaxRPM: 7000)
+        let agg = list.first { $0.name == "Aggressive" }!
+        XCTAssertEqual(agg.points.last?.rpm, 7000)
+    }
+
+    func testBuiltIns_aggressiveHasExpectedShape() {
+        let list = FanProfile.builtIns(fanCount: 1, defaultMaxRPM: 7000)
+        let agg = list.first { $0.name == "Aggressive" }!
+        XCTAssertEqual(agg.points.count, 6)
+        XCTAssertEqual(agg.points[0], CurvePoint(tempC: 35, rpm: 1300))
+        XCTAssertEqual(agg.points[1], CurvePoint(tempC: 45, rpm: 2000))
+        XCTAssertEqual(agg.points[2], CurvePoint(tempC: 55, rpm: 3000))
+        XCTAssertEqual(agg.points[3], CurvePoint(tempC: 65, rpm: 4200))
+        XCTAssertEqual(agg.points[4], CurvePoint(tempC: 72, rpm: 5400))
+        XCTAssertEqual(agg.points[5], CurvePoint(tempC: 78, rpm: 7000))
+    }
+
+    func testBuiltIns_clampsRpmToMaxRPM() {
+        let list = FanProfile.builtIns(fanCount: 1, defaultMaxRPM: 4000)
+        for p in list {
+            for pt in p.points {
+                XCTAssertLessThanOrEqual(pt.rpm, 4000, "\(p.name) has point > maxRPM: \(pt)")
+            }
+        }
+    }
+
+    func testBuiltIns_driversAreCpuDiodeAndGpuDiode() {
+        let list = FanProfile.builtIns(fanCount: 1, defaultMaxRPM: 7000)
+        for p in list where p.name != "Apple Auto" {
+            XCTAssertEqual(Set(p.drivers.map(\.key)), ["TC0D", "TG0D"], "\(p.name)")
+        }
+    }
+
+    func testBuiltIns_offsetIs50() {
+        let list = FanProfile.builtIns(fanCount: 2, defaultMaxRPM: 7000)
+        for p in list { XCTAssertEqual(p.fanOffsetRPM, 50) }
+    }
 }

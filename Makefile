@@ -5,8 +5,8 @@ BUILD_PATH = $(PWD)/build
 APP_PATH = "$(BUILD_PATH)/$(APP).app"
 ZIP_PATH = "$(BUILD_PATH)/$(APP).zip"
 
-.SILENT: archive notarize sign prepare-dmg prepare-dSYM clean next-version check history disk smc leveldb
-.PHONY: build archive notarize sign prepare-dmg prepare-dSYM clean next-version check history open smc leveldb
+.SILENT: archive notarize sign prepare-dmg prepare-dSYM clean next-version check history disk smc leveldb local
+.PHONY: build archive notarize sign prepare-dmg prepare-dSYM clean next-version check history open smc leveldb local
 
 build: clean next-version archive notarize sign prepare-dmg prepare-dSYM open
 
@@ -113,3 +113,27 @@ leveldb:
 	cd $(PWD)/leveldb-source/build && cmake -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DCMAKE_BUILD_TYPE=Release .. && cmake --build .
 	cp $(PWD)/leveldb-source/build/libleveldb.a $(PWD)/Kit/lldb/libleveldb.a
 	rm -rf $(PWD)/leveldb-source
+
+# --- LOCAL DEV BUILD (no notarization, ad-hoc sign, install to /Applications) ---
+local: clean
+	xcodebuild \
+		-scheme $(APP) \
+		-configuration Release \
+		-derivedDataPath $(BUILD_PATH)/DerivedData \
+		CODE_SIGN_IDENTITY="-" \
+		CODE_SIGN_STYLE=Manual \
+		DEVELOPMENT_TEAM="" \
+		CODE_SIGNING_REQUIRED=NO \
+		CODE_SIGNING_ALLOWED=NO \
+		ONLY_ACTIVE_ARCH=YES \
+		build
+	codesign --force --deep --sign - \
+		"$(BUILD_PATH)/DerivedData/Build/Products/Release/$(APP).app"
+	@if [ -d "/Applications/$(APP).app" ]; then \
+		osascript -e 'tell application "$(APP)" to quit' 2>/dev/null || true; \
+		sleep 1; \
+		rm -rf "/Applications/$(APP).app"; \
+	fi
+	cp -R "$(BUILD_PATH)/DerivedData/Build/Products/Release/$(APP).app" /Applications/
+	xattr -cr "/Applications/$(APP).app"
+	@echo "Stats installed to /Applications. Launch from Spotlight."

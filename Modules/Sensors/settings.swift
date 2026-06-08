@@ -26,6 +26,9 @@ internal class Settings: NSStackView, Settings_v {
     private let pointsDataSource = CurvePointsTable()
     private var driversTable: NSTableView?
     private let driversDataSource = DriversTable()
+    private var offsetField: NSTextField?
+    private var hysteresisField: NSTextField?
+    private var thresholdField: NSTextField?
 
     public var callback: (() -> Void) = {}
     public var HIDcallback: (() -> Void) = {}
@@ -174,6 +177,40 @@ internal class Settings: NSStackView, Settings_v {
         driverScroll.heightAnchor.constraint(equalToConstant: 150).isActive = true
         self.driversTable = driversTableView
         curveContainer.addArrangedSubview(driverScroll)
+
+        let fanCount = self.list.compactMap { $0 as? Fan }.count
+        if fanCount >= 2 {
+            let offset = NSTextField()
+            offset.target = self
+            offset.action = #selector(self.commitOffset(_:))
+            offset.stringValue = String(ProfileStore.shared.activeProfile()?.fanOffsetRPM ?? 50)
+            self.offsetField = offset
+            curveContainer.addArrangedSubview(PreferencesRow(
+                localizedString("Fan 1 offset (RPM)"), component: offset))
+        }
+
+        let advancedBox = NSBox()
+        advancedBox.title = localizedString("Advanced")
+        let advStack = NSStackView()
+        advStack.orientation = .vertical
+        advStack.spacing = 4
+
+        let hyst = NSTextField()
+        hyst.target = self
+        hyst.action = #selector(self.commitHysteresis(_:))
+        hyst.stringValue = String(ProfileStore.shared.activeProfile()?.hysteresisC ?? 2.0)
+        self.hysteresisField = hyst
+        advStack.addArrangedSubview(PreferencesRow(localizedString("Hysteresis (°C)"), component: hyst))
+
+        let thresh = NSTextField()
+        thresh.target = self
+        thresh.action = #selector(self.commitThreshold(_:))
+        thresh.stringValue = String(ProfileStore.shared.activeProfile()?.deltaRpmThreshold ?? 150)
+        self.thresholdField = thresh
+        advStack.addArrangedSubview(PreferencesRow(localizedString("RPM apply threshold"), component: thresh))
+
+        advancedBox.contentView = advStack
+        curveContainer.addArrangedSubview(advancedBox)
 
         self.refreshCurveEditor()
     }
@@ -356,6 +393,42 @@ internal class Settings: NSStackView, Settings_v {
             ProfileStore.shared.activeProfileID = copy.id
         } else {
             profiles[idx].drivers = keys.map { DriverSensor(key: $0) }
+        }
+        ProfileStore.shared.saveProfiles(profiles)
+        NotificationCenter.default.post(name: .fanProfileChanged, object: nil)
+        self.reloadProfilePicker()
+    }
+
+    @objc private func commitOffset(_ sender: NSTextField) {
+        let v = max(0, min(1000, Int(sender.stringValue) ?? 50))
+        sender.stringValue = String(v)
+        self.editActiveProfile { $0.fanOffsetRPM = v }
+    }
+    @objc private func commitHysteresis(_ sender: NSTextField) {
+        let v = max(0.5, min(10, Double(sender.stringValue) ?? 2.0))
+        sender.stringValue = String(v)
+        self.editActiveProfile { $0.hysteresisC = v }
+    }
+    @objc private func commitThreshold(_ sender: NSTextField) {
+        let v = max(50, min(500, Int(sender.stringValue) ?? 150))
+        sender.stringValue = String(v)
+        self.editActiveProfile { $0.deltaRpmThreshold = v }
+    }
+
+    private func editActiveProfile(_ mutate: (inout FanProfile) -> Void) {
+        var profiles = ProfileStore.shared.loadProfiles()
+        guard let activeID = ProfileStore.shared.activeProfileID,
+              let idx = profiles.firstIndex(where: { $0.id == activeID }) else { return }
+        if profiles[idx].isBuiltIn {
+            var copy = profiles[idx]
+            copy.id = UUID()
+            copy.isBuiltIn = false
+            copy.name = profiles[idx].name + " (custom)"
+            mutate(&copy)
+            profiles.append(copy)
+            ProfileStore.shared.activeProfileID = copy.id
+        } else {
+            mutate(&profiles[idx])
         }
         ProfileStore.shared.saveProfiles(profiles)
         NotificationCenter.default.post(name: .fanProfileChanged, object: nil)

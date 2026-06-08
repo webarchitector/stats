@@ -128,17 +128,31 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         self.ensureSettingsWindow().open(module: module)
     }
     
-    /// True if a Stats process other than self is already running. Activates
-    /// the existing instance so the user sees menubar widgets jump.
+    /// Terminate any older Stats process with the same bundle id. Returning
+    /// `true` means OUR process should quit (an even-newer peer was found).
+    /// In the common case — user re-launches Stats while a stale copy still
+    /// runs — we keep ourselves (the freshly-launched binary, e.g. just-built
+    /// by `make local`) and kick the old one out.
     private static func anotherInstanceIsRunning() -> Bool {
         let myPID = ProcessInfo.processInfo.processIdentifier
         let myBundle = Bundle.main.bundleIdentifier ?? "eu.exelban.Stats"
+        let me = NSRunningApplication.current
         let peers = NSWorkspace.shared.runningApplications.filter {
             $0.bundleIdentifier == myBundle && $0.processIdentifier != myPID
         }
-        guard let peer = peers.first else { return false }
-        peer.activate(options: [.activateIgnoringOtherApps])
-        return true
+        var shouldExitSelf = false
+        for peer in peers {
+            // If a peer launched after us, it's the user's intent — defer to it.
+            // Otherwise force-quit the older peer; user wants the newest binary.
+            if let peerLaunch = peer.launchDate,
+               let myLaunch = me.launchDate,
+               peerLaunch > myLaunch {
+                shouldExitSelf = true
+            } else {
+                peer.forceTerminate()
+            }
+        }
+        return shouldExitSelf
     }
 
     private func showSettingsIfNoActiveWidgets() {

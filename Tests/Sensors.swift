@@ -345,16 +345,20 @@ final class SensorsTests: XCTestCase {
 
     // MARK: - FanProfile.builtIns
 
-    func testBuiltIns_singleFan_hasFourProfiles() {
+    private static let builtInOrder: [String] = [
+        "Apple Auto", "Quiet", "Linear", "Balanced", "Aggressive", "Performance"
+    ]
+
+    func testBuiltIns_singleFan_hasSixProfiles() {
         let list = FanProfile.builtIns(fanCount: 1, defaultMaxRPM: 7000)
-        XCTAssertEqual(list.count, 4)
-        XCTAssertEqual(list.map(\.name), ["Apple Auto", "Quiet", "Balanced", "Aggressive"])
+        XCTAssertEqual(list.count, 6)
+        XCTAssertEqual(list.map(\.name), Self.builtInOrder)
     }
 
-    func testBuiltIns_twoFans_hasSameFourProfiles() {
+    func testBuiltIns_twoFans_hasSameSixProfiles() {
         let list = FanProfile.builtIns(fanCount: 2, defaultMaxRPM: 7000)
-        XCTAssertEqual(list.count, 4)
-        XCTAssertEqual(list.map(\.name), ["Apple Auto", "Quiet", "Balanced", "Aggressive"])
+        XCTAssertEqual(list.count, 6)
+        XCTAssertEqual(list.map(\.name), Self.builtInOrder)
     }
 
     func testBuiltIns_allMarkedBuiltIn() {
@@ -377,13 +381,68 @@ final class SensorsTests: XCTestCase {
     func testBuiltIns_aggressiveHasExpectedShape() {
         let list = FanProfile.builtIns(fanCount: 1, defaultMaxRPM: 7000)
         let agg = list.first { $0.name == "Aggressive" }!
-        XCTAssertEqual(agg.points.count, 6)
-        XCTAssertEqual(agg.points[0], CurvePoint(tempC: 35, rpm: 1300))
-        XCTAssertEqual(agg.points[1], CurvePoint(tempC: 45, rpm: 2000))
-        XCTAssertEqual(agg.points[2], CurvePoint(tempC: 55, rpm: 3000))
-        XCTAssertEqual(agg.points[3], CurvePoint(tempC: 65, rpm: 4200))
-        XCTAssertEqual(agg.points[4], CurvePoint(tempC: 72, rpm: 5400))
-        XCTAssertEqual(agg.points[5], CurvePoint(tempC: 78, rpm: 7000))
+        XCTAssertEqual(agg.points.count, 9)
+        XCTAssertEqual(agg.points[0], CurvePoint(tempC: 30, rpm: 1300))
+        XCTAssertEqual(agg.points[1], CurvePoint(tempC: 38, rpm: 1700))
+        XCTAssertEqual(agg.points[2], CurvePoint(tempC: 46, rpm: 2300))
+        XCTAssertEqual(agg.points[3], CurvePoint(tempC: 53, rpm: 3000))
+        XCTAssertEqual(agg.points[4], CurvePoint(tempC: 60, rpm: 3800))
+        XCTAssertEqual(agg.points[5], CurvePoint(tempC: 66, rpm: 4500))
+        XCTAssertEqual(agg.points[6], CurvePoint(tempC: 72, rpm: 5300))
+        XCTAssertEqual(agg.points[7], CurvePoint(tempC: 76, rpm: 6100))
+        XCTAssertEqual(agg.points[8], CurvePoint(tempC: 80, rpm: 7000))
+    }
+
+    func testBuiltIns_allCurveProfilesAreMonotonic() {
+        // Smoother curves require monotonically rising RPM with rising temp.
+        let list = FanProfile.builtIns(fanCount: 1, defaultMaxRPM: 7000)
+        for p in list where !p.points.isEmpty {
+            let pts = p.points
+            for i in 1..<pts.count {
+                XCTAssertGreaterThan(pts[i].tempC, pts[i-1].tempC,
+                    "\(p.name): temps must rise strictly (\(pts[i-1]) → \(pts[i]))")
+                XCTAssertGreaterThanOrEqual(pts[i].rpm, pts[i-1].rpm,
+                    "\(p.name): RPM must not decrease (\(pts[i-1]) → \(pts[i]))")
+            }
+        }
+    }
+
+    func testBuiltIns_allCurveProfilesEndAtMaxRPM() {
+        let list = FanProfile.builtIns(fanCount: 1, defaultMaxRPM: 7000)
+        for p in list where !p.points.isEmpty {
+            XCTAssertEqual(p.points.last?.rpm, 7000,
+                "\(p.name) last point should clamp to maxRPM")
+        }
+    }
+
+    func testBuiltIns_linearHasPredictableSlope() {
+        // Linear profile: ~800 RPM per 10°C for predictable response.
+        let list = FanProfile.builtIns(fanCount: 1, defaultMaxRPM: 7000)
+        let lin = list.first { $0.name == "Linear" }!
+        XCTAssertEqual(lin.points.count, 7)
+        // Spot-check a couple segments are evenly spaced.
+        for i in 1..<(lin.points.count - 1) {
+            let prev = lin.points[i-1]
+            let cur = lin.points[i]
+            let tempDelta = cur.tempC - prev.tempC
+            let rpmDelta = Double(cur.rpm - prev.rpm)
+            // Most segments are 10°C / 800 RPM; allow ±100 RPM for the end segments.
+            let ratio = rpmDelta / tempDelta
+            XCTAssertGreaterThan(ratio, 60, "Linear segment \(prev) → \(cur) too flat")
+            XCTAssertLessThan(ratio, 120, "Linear segment \(prev) → \(cur) too steep")
+        }
+    }
+
+    func testBuiltIns_performanceRampsEarliest() {
+        // Performance profile reaches half-max RPM at a lower temp than Aggressive.
+        let list = FanProfile.builtIns(fanCount: 1, defaultMaxRPM: 7000)
+        let perf = list.first { $0.name == "Performance" }!
+        let agg = list.first { $0.name == "Aggressive" }!
+        // At 50°C: Performance should be at or above Aggressive's RPM.
+        let perf50 = FanCurve.interpolate(points: perf.points, tempC: 50)
+        let agg50 = FanCurve.interpolate(points: agg.points, tempC: 50)
+        XCTAssertGreaterThanOrEqual(perf50, agg50,
+            "Performance should ramp earlier than Aggressive at 50°C")
     }
 
     func testBuiltIns_clampsRpmToMaxRPM() {
@@ -481,9 +540,10 @@ final class SensorsTests: XCTestCase {
         let store = ProfileStore()
         let list = FanProfile.builtIns(fanCount: 1, defaultMaxRPM: 7000)
         store.saveProfiles(list)
-        store.activeProfileID = list[2].id   // "Balanced"
+        // Index 3 = "Balanced" (order: Apple Auto, Quiet, Linear, Balanced, Aggressive, Performance)
+        store.activeProfileID = list[3].id
         let active = store.activeProfile()
-        XCTAssertEqual(active?.id, list[2].id)
+        XCTAssertEqual(active?.id, list[3].id)
         XCTAssertEqual(active?.name, "Balanced")
         clearProfileStore()
     }
@@ -504,8 +564,8 @@ final class SensorsTests: XCTestCase {
         let store = ProfileStore()
         store.bootstrapIfNeeded(fanCount: 1, defaultMaxRPM: 7000)
         let loaded = store.loadProfiles()
-        XCTAssertEqual(loaded.count, 4)
-        XCTAssertEqual(loaded.map(\.name), ["Apple Auto", "Quiet", "Balanced", "Aggressive"])
+        XCTAssertEqual(loaded.count, 6)
+        XCTAssertEqual(loaded.map(\.name), Self.builtInOrder)
         let active = store.activeProfile()
         XCTAssertEqual(active?.name, "Aggressive")
         clearProfileStore()
@@ -599,18 +659,18 @@ final class SensorsTests: XCTestCase {
         // Aggressive profile drivers are platform-dependent — use whatever the
         // bootstrap actually wrote so the snapshot's temp keys match.
         let driverKeys = store.activeProfile()!.drivers.map(\.key)
-        // Aggressive at 65°C effective temp → 4200 RPM
         let temps = driverKeys.enumerated().map { (i, key) in
             (key, i == 0 ? 65.0 : 50.0)
         }
         let snap = makeControllerSnapshot(fans: [makeControllerFan(id: 0)], temps: temps)
         c.tick(snapshot: snap)
-        // First apply should set mode to .forced exactly once
+        // First apply sets mode to .forced exactly once.
         XCTAssertEqual(fake.modeCalls, [.init(id: 0, mode: FanMode.forced.rawValue)])
-        // Speed = 4200 (effective temp = max(65, 50) = 65)
+        // Effective temp = max(65, 50) = 65°C. Aggressive curve between
+        // (60, 3800) and (66, 4500) → interpolate to 4383.
         XCTAssertEqual(fake.speedCalls.count, 1)
         XCTAssertEqual(fake.speedCalls[0].id, 0)
-        XCTAssertEqual(fake.speedCalls[0].rpm, 4200)
+        XCTAssertEqual(fake.speedCalls[0].rpm, 4383)
         clearProfileStore()
     }
 
@@ -889,7 +949,7 @@ final class SensorsTests: XCTestCase {
         c.tick(snapshot: makeControllerSnapshot(
             fans: [makeControllerFan(id: 0, max: 7000)],
             temps: [("TC0D", 50)]))
-        XCTAssertEqual(store.loadProfiles().count, 4)
+        XCTAssertEqual(store.loadProfiles().count, 6)
         XCTAssertEqual(store.activeProfile()?.name, "Aggressive")
         clearProfileStore()
     }

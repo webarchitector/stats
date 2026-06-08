@@ -454,6 +454,8 @@ internal class FanView: NSStackView {
     private var helperView: NSView? = nil
     private var controlView: NSView? = nil
     private var buttonsView: NSView? = nil
+    private var profileView: NSView? = nil
+    private var profilePopup: NSPopUpButton? = nil
     
     private var valueField: NSTextField? = nil
     private var sliderValueField: NSTextField? = nil
@@ -505,6 +507,7 @@ internal class FanView: NSStackView {
         self.helperView = self.noHelper()
         self.controlView = self.control()
         self.buttonsView = self.mode()
+        self.profileView = self.curveProfilePicker()
         
         self.orientation = .vertical
         self.alignment = .centerX
@@ -610,6 +613,54 @@ internal class FanView: NSStackView {
         return view
     }
     
+    private func curveProfilePicker() -> NSView {
+        let view = NSView(frame: NSRect(x: 0, y: 0, width: self.frame.width, height: 26))
+        view.heightAnchor.constraint(equalToConstant: 26).isActive = true
+
+        let popup = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: self.frame.width, height: 22))
+        popup.target = self
+        popup.action = #selector(self.curveProfileChanged(_:))
+        self.profilePopup = popup
+        self.reloadCurveProfilePopup()
+
+        view.addSubview(popup)
+        NotificationCenter.default.addObserver(self,
+            selector: #selector(self.reloadCurveProfilePopupNotification),
+            name: .fanProfileChanged, object: nil)
+        NotificationCenter.default.addObserver(self,
+            selector: #selector(self.fanControlEnabledChangedNotification),
+            name: .fanControlEnabledChanged, object: nil)
+        return view
+    }
+
+    private func reloadCurveProfilePopup() {
+        guard let popup = self.profilePopup else { return }
+        popup.removeAllItems()
+        let profiles = ProfileStore.shared.loadProfiles()
+        for p in profiles {
+            popup.addItem(withTitle: p.name)
+            popup.lastItem?.representedObject = p.id
+        }
+        if let activeID = ProfileStore.shared.activeProfileID,
+           let idx = profiles.firstIndex(where: { $0.id == activeID }) {
+            popup.selectItem(at: idx)
+        }
+    }
+
+    @objc private func reloadCurveProfilePopupNotification() {
+        self.reloadCurveProfilePopup()
+    }
+
+    @objc private func fanControlEnabledChangedNotification() {
+        self.setupControls()
+    }
+
+    @objc private func curveProfileChanged(_ sender: NSPopUpButton) {
+        guard let id = sender.selectedItem?.representedObject as? UUID else { return }
+        ProfileStore.shared.activeProfileID = id
+        NotificationCenter.default.post(name: .fanProfileChanged, object: nil)
+    }
+
     private func mode() -> NSView {
         let view: NSView = NSView(frame: NSRect(x: 0, y: 0, width: self.frame.width, height: 30))
         view.heightAnchor.constraint(equalToConstant: view.bounds.height).isActive = true
@@ -915,14 +966,22 @@ internal class FanView: NSStackView {
     
     private func setupControls(_ isInstalled: Bool? = nil) {
         let helperState = isInstalled ?? SMCHelper.shared.isInstalled
-        
+        let curvesEnabled = ProfileStore.shared.enabled
+
         if !self.controlState {
             self.helperView?.removeFromSuperview()
             self.controlView?.removeFromSuperview()
             self.buttonsView?.removeFromSuperview()
+            self.profileView?.removeFromSuperview()
         } else {
             if helperState {
                 self.helperView?.removeFromSuperview()
+                if curvesEnabled, let v = self.profileView {
+                    self.reloadCurveProfilePopup()
+                    self.addArrangedSubview(v)
+                } else {
+                    self.profileView?.removeFromSuperview()
+                }
                 if self.fan.maxSpeed != self.fan.minSpeed, let v = self.buttonsView {
                     self.addArrangedSubview(v)
                 }
@@ -932,12 +991,13 @@ internal class FanView: NSStackView {
             } else {
                 self.buttonsView?.removeFromSuperview()
                 self.controlView?.removeFromSuperview()
+                self.profileView?.removeFromSuperview()
                 if let v = self.helperView {
                     self.addArrangedSubview(v)
                 }
             }
         }
-        
+
         let h = self.arrangedSubviews.map({ $0.bounds.height }).reduce(0, +)
         self.setFrameSize(NSSize(width: self.frame.width, height: h + self.horizontalMargin))
         self.sizeCallback()

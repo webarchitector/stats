@@ -120,12 +120,9 @@ internal class Settings: NSStackView, Settings_v {
         self.fanCurveContainer = curveContainer
         self.addArrangedSubview(curveContainer)
 
-        self.reloadProfilePicker()
-        if let popup = self.profilePopup {
-            curveContainer.addArrangedSubview(PreferencesRow(
-                localizedString("Active profile"), component: popup))
-        }
-
+        // Active profile picker now lives in the menubar popup (FanView).
+        // Settings only exposes per-profile editing (curve, drivers, advanced)
+        // and profile management (duplicate/delete) operating on the active profile.
         let duplicateBtn = NSButton(title: localizedString("Duplicate"),
                                     target: self,
                                     action: #selector(self.duplicateProfile))
@@ -133,9 +130,14 @@ internal class Settings: NSStackView, Settings_v {
                                  target: self,
                                  action: #selector(self.deleteProfile))
         self.deleteBtn = deleteBtn
+        deleteBtn.isEnabled = !(ProfileStore.shared.activeProfile()?.isBuiltIn ?? true)
         let buttonRow = NSStackView(views: [duplicateBtn, deleteBtn])
         buttonRow.spacing = 8
         curveContainer.addArrangedSubview(buttonRow)
+
+        NotificationCenter.default.addObserver(self,
+            selector: #selector(self.activeProfileChangedExternally),
+            name: .fanProfileChanged, object: nil)
 
         let table = NSTableView()
         let tempCol = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("temp"))
@@ -348,28 +350,15 @@ internal class Settings: NSStackView, Settings_v {
         NotificationCenter.default.post(name: .fanControlEnabledChanged, object: nil)
     }
 
+    /// Called only after profile mutations (duplicate/delete) — no longer rebuilds
+    /// a Settings-local popup since the active picker now lives in the menubar.
     private func reloadProfilePicker() {
-        let popup = self.profilePopup ?? NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 200, height: 24))
-        popup.removeAllItems()
-        let profiles = ProfileStore.shared.loadProfiles()
-        for p in profiles {
-            popup.addItem(withTitle: p.name)
-            popup.lastItem?.representedObject = p.id
-        }
-        if let activeID = ProfileStore.shared.activeProfileID,
-           let idx = profiles.firstIndex(where: { $0.id == activeID }) {
-            popup.selectItem(at: idx)
-        }
-        popup.target = self
-        popup.action = #selector(self.profileChanged(_:))
-        self.profilePopup = popup
         self.deleteBtn?.isEnabled = !(ProfileStore.shared.activeProfile()?.isBuiltIn ?? true)
     }
 
-    @objc private func profileChanged(_ sender: NSPopUpButton) {
-        guard let id = sender.selectedItem?.representedObject as? UUID else { return }
-        ProfileStore.shared.activeProfileID = id
-        NotificationCenter.default.post(name: .fanProfileChanged, object: nil)
+    /// Settings's editor always edits the ACTIVE profile (selected from the popup
+    /// in the menubar). When the popup selection changes, refresh the editor.
+    @objc private func activeProfileChangedExternally() {
         self.refreshCurveEditor()
         self.deleteBtn?.isEnabled = !(ProfileStore.shared.activeProfile()?.isBuiltIn ?? true)
     }

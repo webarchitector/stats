@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		421C47D22F2AD502B353402F /* Sensors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58091506F3B289B231B39FE3 /* Sensors.swift */; };
 		5C038CF62D86EE8A00516809 /* SystemStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C038CF52D86EE8700516809 /* SystemStats.swift */; };
 		5C044F7A2B3DE6F3005F6951 /* portal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C044F792B3DE6F3005F6951 /* portal.swift */; };
 		5C0A2A8A292A5B4D009B4C1F /* SMJobBlessUtil.py in Resources */ = {isa = PBXBuildFile; fileRef = 5C0A2A89292A5B4D009B4C1F /* SMJobBlessUtil.py */; };
@@ -526,6 +527,7 @@
 		47665544298DC92F00F7B709 /* sk */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = sk; path = sk.lproj/Localizable.strings; sourceTree = "<group>"; };
 		4921436D25319699000A1C47 /* ko */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ko; path = ko.lproj/Localizable.strings; sourceTree = "<group>"; };
 		4F92E6432D0F293100EA593F /* fi */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = fi; path = fi.lproj/Localizable.strings; sourceTree = "<group>"; };
+		58091506F3B289B231B39FE3 /* Sensors.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Sensors.swift; sourceTree = "<group>"; };
 		5C038CF52D86EE8700516809 /* SystemStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemStats.swift; sourceTree = "<group>"; };
 		5C044F792B3DE6F3005F6951 /* portal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = portal.swift; sourceTree = "<group>"; };
 		5C0A2A89292A5B4D009B4C1F /* SMJobBlessUtil.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = SMJobBlessUtil.py; sourceTree = "<group>"; };
@@ -1281,6 +1283,7 @@
 			children = (
 				9AAC5E2E280ACC120043D892 /* Info.plist */,
 				9AAC5E40280ACC210043D892 /* RAM.swift */,
+				58091506F3B289B231B39FE3 /* Sensors.swift */,
 			);
 			path = Tests;
 			sourceTree = "<group>";
@@ -1538,8 +1541,6 @@
 				5E0C63612FBDB87A00D9BA3E /* PBXTargetDependency */,
 			);
 			name = Remote;
-			packageProductDependencies = (
-			);
 			productName = Remote;
 			productReference = 5E0C63472FBDB7DE00D9BA3E /* Remote.framework */;
 			productType = "com.apple.product-type.framework";
@@ -1596,8 +1597,6 @@
 				5E0C634E2FBDB7DE00D9BA3E /* PBXTargetDependency */,
 			);
 			name = Stats;
-			packageProductDependencies = (
-			);
 			productName = Stats;
 			productReference = 9A1410F5229E721100D29793 /* Stats.app */;
 			productType = "com.apple.product-type.application";
@@ -1616,8 +1615,6 @@
 			dependencies = (
 			);
 			name = Kit;
-			packageProductDependencies = (
-			);
 			productName = Kit;
 			productReference = 9A2846F72666A9CC00EC1F6D /* Kit.framework */;
 			productType = "com.apple.product-type.framework";
@@ -1654,8 +1651,6 @@
 				9A2847D92666AA9C00EC1F6D /* PBXTargetDependency */,
 			);
 			name = Net;
-			packageProductDependencies = (
-			);
 			productName = Net;
 			productReference = 9A3E17CC247A94AF00449CD1 /* Net.framework */;
 			productType = "com.apple.product-type.framework";
@@ -1934,8 +1929,6 @@
 				fi,
 			);
 			mainGroup = 9A1410EC229E721100D29793;
-			packageReferences = (
-			);
 			productRefGroup = 9A1410F6229E721100D29793 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -2315,6 +2308,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				9AAC5E41280ACC210043D892 /* RAM.swift in Sources */,
+				421C47D22F2AD502B353402F /* Sensors.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

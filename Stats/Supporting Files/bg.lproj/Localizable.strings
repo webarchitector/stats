@@ -112,23 +112,10 @@
 "welcome_message" = "Благодарим Ви, че ползвате Stats, безплатен системен монитор за macOS с отворен код.";
 "Start the application automatically when starting your Mac" = "Стартирай приложението автоматично при стартиране на вашия Mac";
 "Do not start the application automatically when starting your Mac" = "Не стартирай приложението автоматично при стартиране на вашия Mac";
-"Do everything silently in the background (recommended)" = "Прави всичко тихо във фонов режим (препоръчително)";
-"Check for a new version on startup" = "Проверяване за нова версия при стартиране";
-"Check for a new version every day (once a day)" = "Проверяване за нова версия всеки ден (веднъж на ден)";
-"Check for a new version every week (once a week)" = "Проверяване за нова версия всяка седмица (веднъж на седмица)";
-"Check for a new version every month (once a month)" = "Проверяване за нова версия всеки месец (веднъж на месец)";
-"Never check for updates (not recommended)" = "Без проверяване за нови версии (не се препоръчва)";
-"Anonymous telemetry for better development decisions" = "Анонимна телеметрия за по-добри решения при разработката"; // gemma4:31b
-"Share anonymous telemetry data" = "Споделяне на анонимни телеметрични данни"; // gemma4:31b
-"Do not share anonymous telemetry data" = "Не споделяйте анонимни телеметрични данни"; // gemma4:31b
 "The configuration is completed" = "Конфигурацията е завършена";
 "finish_setup_message" = "Всичко е настроено! \n Stats е приложение с отворен код, безплатно е и винаги ще бъде. \n Ако ви допада, може да подкрепите проекта, ще сме много благодарни!";
 
 // Alerts
-"New version available" = "Налична е нова версия";
-"Click to install the new version of Stats" = "Натиснете, за да инсталирате новата версия на Stats";
-"Successfully updated" = "Успешно обновяване";
-"Stats was updated to v" = "Stats е обновена до версия v%0";
 "Reset settings text" = "Всички настройки на приложението ще бъдат занулени и приложението ще се рестартира. Сигурни ли сте, че искате това?";
 "Support text" = "Благодарим ви, че използвате Статистики!\n\n Поддържането и подобряването на този проект с отворен код изисква време и ресурси. Вашата подкрепа ни помага да продължим да предоставяме безплатно и надеждно приложение за всички.\n\nАко намирате Stats за полезно, моля, помислете дали да не дадете своя принос. Всяка малка част помага!";
 
@@ -144,14 +131,11 @@
 "Toggle the module" = "Превключи модула"; // gemma4:31b
 
 // Application settings
-"Update application" = "Обновяване на приложението";
-"Check for updates" = "Проверка за обновления";
 "At start" = "При стартиране";
 "Once per day" = "Веднъж на ден";
 "Once per week" = "Веднъж на седмица";
 "Once per month" = "Веднъж на месец";
 "Never" = "Никога";
-"Check for update" = "Проверка за обновления";
 "Show icon in dock" = "Показване на икона в Dock";
 "Start at login" = "Автоматично стартиране";
 "Build number" = "Номер на компилацията"; // gemma4:31b
@@ -163,7 +147,6 @@
 "Combined modules" = "Комбинирани модули"; // translategemma:4b
 "Combined details" = "Комбинирани подробности"; // gemma4:31b
 "Spacing" = "Интервал"; // gemma4:31b
-"Share anonymous telemetry" = "Споделяне на анонимна телеметрия"; // gemma4:31b
 "Choose file" = "Изберете файл"; // translategemma:4b
 "Stress tests" = "Стрес тестове"; // gemma4:31b
 
@@ -180,12 +163,6 @@
 "Disks" = "Дискове"; // gemma4:31b
 "Display" = "Дисплей"; // translategemma:4b
 
-// Update
-"The latest version of Stats installed" = "Имате най-новата версия на Stats";
-"Downloading..." = "Изтегляне...";
-"Current version: " = "Текуща версия:  ";
-"Latest version: " = "Последна версия:    ";
-
 // Widgets
 "Color" = "Цвят";
 "Label" = "Етикет";
@@ -195,7 +172,6 @@
 "Colorize" = "Оцветяване";
 "Colorize value" = "Стойност на оцветяване";
 "Additional information" = "Допълнителна информация";
-"Reverse values order" = "Обръщане на подредбата на стойностите";
 "Base" = "Основа";
 "Display mode" = "Режим на преглед";
 "One row" = "Един ред";
@@ -229,8 +205,6 @@
 
 // Module Kit
 "Open module settings" = "Отваряне на настройките на модула";
-"Select widget" = "Избор на уиджет %0";
-"Open widget settings" = "Настройки на уиджета";
 "Update interval" = "Интервал на опресняване";
 "Usage history" = "История на използването";
 "Details" = "Подробности";
@@ -251,7 +225,6 @@
 // Modules
 "Number of top processes" = "Брой топ процеси";
 "Update interval for top processes" = "Интервал на опресняване на топ процесите";
-"Notification level" = "Ниво на известия";
 "Chart color" = "Цвят на графиката";
 "Main chart scaling" = "Мащабиране на основната графика"; // gemma4:31b
 "Scale value" = "Стойност на мащаба"; // translategemma:4b
@@ -275,7 +248,6 @@
 "5 minutes" = "5 минути";
 "15 minutes" = "15 минути";
 "CPU usage threshold" = "Праг на използване на CPU"; // gemma4:31b
-"CPU usage is" = "Употребата на процесорът е %0";
 "Efficiency cores" = "Ефикасни ядра";
 "Performance cores" = "Производителни ядра";
 "System color" = "Системен цвят";
@@ -298,18 +270,11 @@
 // GPU
 "GPU to show" = "Показване на графична карта";
 "Show GPU type" = "Показване на вид на графична карта";
-"GPU enabled" = "Включена графична карта";
-"GPU disabled" = "Изключена графична карта";
-"GPU temperature" = "Температура на графичната карта";
 "GPU utilization" = "Утилизация на графичната карта";
 "Vendor" = "Производител";
 "Model" = "Модел";
 "Status" = "Статус";
 "Active" = "Активна";
-"Non active" = "Неактивна";
-"Fan speed" = "Скорост на вентилатора";
-"Core clock" = "Тактова честота на ядрото";
-"Memory clock" = "Тактова честота на паметта";
 "Utilization" = "Утилизация";
 "Render utilization" = "Използване на render"; // gemma4:31b
 "Tiler utilization" = "Използване на Tiler"; // gemma4:31b
@@ -359,7 +324,6 @@
 "Power on hours" = "Power on hours";
 
 // Sensors
-"Temperature unit" = "Температурна единица";
 "Celsius" = "Целзиус";
 "Fahrenheit" = "Фаренхайт";
 "Save the fan speed" = "Запазете скоростта на вентилатора";
@@ -388,11 +352,6 @@
 "Interface" = "Интерфейс";
 "Physical address" = "Физически адрес";
 "Refresh" = "Опресняване";
-"Click to copy public IP address" = "Натиснете, за да копирате публичния IP адрес";
-"Click to copy local IP address" = "Натиснете, за да копирате локалния IP адрес";
-"Click to copy wifi name" = "Натиснете, за да копирате името на WiFi мреждата";
-"Click to copy mac address" = "Натиснете, за да копирате mac адреса";
-"No connection" = "Няма връзка";
 "Network interface" = "Мрежов интерфейс";
 "Total download" = "Общо изтеглено";
 "Total upload" = "Общо качено";
@@ -404,12 +363,9 @@
 "Standard" = "Стандарт"; // translategemma:4b
 "Security" = "Криптиране"; // gemma4:31b
 "Channel" = "Канал";
-"Common scale" = "Обща скала"; // gemma4:31b
 "Autodetection" = "Автоматично засичане";
 "Widget activation threshold" = "Праг за активация на виджета"; // gemma4:31b
 "Internet connection" = "Интернет връзка";
-"Active state color" = "Цвят на активното състояние";
-"Nonactive state color" = "Цвят на неактивното състояние";
 "Connectivity host" = "Хост на свързаността"; // gemma4:31b
 "Leave empty to disable the check" = "Оставете празно, за да изключите проверката";
 "Connectivity history" = "История на свързаността"; // gemma4:31b
@@ -417,7 +373,6 @@
 "Every hour" = "Всеки час"; // gemma4:31b
 "Every 12 hours" = "На всеки 12 часа"; // gemma4:31b
 "Every 24 hours" = "На всеки 24 часа"; // gemma4:31b
-"Network activity" = "Мрежова активност"; // gemma4:31b
 "Last reset" = "Последно нулиране преди %0"; // gemma4:31b
 "Latency" = "Закъснение"; // gemma4:31b
 "Upload speed" = "Качване"; // translategemma:4b
@@ -465,11 +420,7 @@
 "Last charge" = "Последно зареждане";
 "Capacity" = "Капацитет";
 "current / maximum / designed" = "текуща / максимална / проектирана"; // gemma4:31b
-"Low power mode" = "Режим за пестене на енергията";
 "Percentage inside the icon" = "Процент в иконата";
-"Colorize battery" = "Оцветяване на батерията"; // gemma4:31b
-"Charging current" = "Ток на зареждане"; // gemma4:31b
-"Charging Voltage" = "Напрежение при зареждане"; // gemma4:31b
 "Charger state inside the battery" = "Състояние на зареждането вътре в батерията"; // translategemma:4b
 
 

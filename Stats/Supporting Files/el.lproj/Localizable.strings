@@ -112,23 +112,10 @@
 "welcome_message" = "Ευχαριστούμε που χρησιμοποιείτε το Stats, ένα δωρεάν εργαλείο παρακολούθησης συστήματος macOS ανοιχτού κώδικα για τη γραμμή μενού σας."; // gemma4:31b
 "Start the application automatically when starting your Mac" = "Εκκίνηση της εφαρμογής αυτόματα κατά την εκκίνηση του Mac σας"; // gemma4:31b
 "Do not start the application automatically when starting your Mac" = "Μην εκκινείτε την εφαρμογή αυτόματα κατά την εκκίνηση του Mac σας"; // gemma4:31b
-"Do everything silently in the background (recommended)" = "Κάντε τα πάντα αθόρυβα στο παρασκήνιο (συνιστάται)"; // translategemma:4b
-"Check for a new version on startup" = "Έλεγχος για νέα έκδοση κατά την εκκίνηση"; // gemma4:31b
-"Check for a new version every day (once a day)" = "Έλεγχος για νέα έκδοση κάθε μέρα (μία φορά την ημέρα)"; // gemma4:31b
-"Check for a new version every week (once a week)" = "Έλεγχος για νέα έκδοση κάθε εβδομάδα (μία φορά την εβδομάδα)"; // gemma4:31b
-"Check for a new version every month (once a month)" = "Έλεγχος για νέα έκδοση κάθε μήνα (μία φορά τον μήνα)"; // gemma4:31b
-"Never check for updates (not recommended)" = "Ποτέ μην ελέγχετε για ενημερώσεις (δεν συνιστάται)"; // gemma4:31b
-"Anonymous telemetry for better development decisions" = "Ανώνυμη τηλεμετρία για καλύτερες αποφάσεις ανάπτυξης"; // gemma4:31b
-"Share anonymous telemetry data" = "Κοινοποίηση ανώνυμων τηλεμετρικών δεδομένων"; // gemma4:31b
-"Do not share anonymous telemetry data" = "Μην κοινοποιείτε ανώνυμα δεδομένα τηλεμετρίας"; // gemma4:31b
 "The configuration is completed" = "Η διαμόρφωση ολοκληρώθηκε"; // gemma4:31b
 "finish_setup_message" = "Όλα είναι έτοιμα! \\n Το Stats είναι ένα εργαλείο ανοιχτού κώδικα, είναι δωρεάν και θα παραμείνει έτσι. \\n Αν σας αρέσει, μπορείτε να υποστηρίξετε το έργο, εκτιμάται πάντα!"; // gemma4:31b
 
 // Alerts
-"New version available" = "Νέα έκδοση διαθέσιμη";
-"Click to install the new version of Stats" = "Πάτησε εδώ για την εγκατάσταση της νέας έκδοσης του Stats";
-"Successfully updated" = "Επιτυχής ενημέρωση";
-"Stats was updated to v" = "Το Stats ενημερώθηκε στην ε%0";
 "Reset settings text" = "Όλες οι ρυθμίσεις της εφαρμογής θα αρχικοποιηθούν και η εφαρμογή θα επανεκκινηθεί. Είστε σίγουροι;";
 "Support text" = "Σας ευχαριστούμε για τη χρήση των Stats!\n\n Η συντήρηση και η βελτίωση αυτού του έργου ανοιχτού κώδικα απαιτεί χρόνο και πόρους. Η υποστήριξή σας μας βοηθά να συνεχίσουμε να παρέχουμε μια δωρεάν και αξιόπιστη εφαρμογή για όλους.\n\nΕάν βρίσκετε το Stats χρήσιμο, παρακαλούμε σκεφτείτε να συνεισφέρετε. Κάθε μικρό ποσό βοηθάει!";
 
@@ -144,14 +131,11 @@
 "Toggle the module" = "Εναλλαγή του μοδούλου"; // gemma4:31b
 
 // Application settings
-"Update application" = "Ενημέρωση Εφαρμογής";
-"Check for updates" = "Έλεγχος για ενημερώσεις";
 "At start" = "Κατά την έναρξη";
 "Once per day" = "Μια φορά την ημέρα";
 "Once per week" = "Μια φορά την εβδομάδα";
 "Once per month" = "Μια φορά το μήνα";
 "Never" = "Ποτέ";
-"Check for update" = "Έλεγχος για ενημέρωση";
 "Show icon in dock" = "Εμφάνιση εικονιδίου στο dock";
 "Start at login" = "Εκκίνηση κατά τη σύνδεση";
 "Build number" = "Αριθμός έκδοσης";
@@ -163,7 +147,6 @@
 "Combined modules" = "Συνένωση ενοτήτων";
 "Combined details" = "Συνδυασμένες λεπτομέρειες"; // gemma4:31b
 "Spacing" = "Κενό";
-"Share anonymous telemetry" = "Κοινοποίηση ανώνυμης τηλεμετρίας"; // gemma4:31b
 "Choose file" = "Επιλογή αρχείου"; // gemma4:31b
 "Stress tests" = "Δοκιμές καταπόνησης"; // gemma4:31b
 
@@ -180,12 +163,6 @@
 "Disks" = "Δίσκοι"; // translategemma:4b
 "Display" = "Οθόνη"; // translategemma:4b
 
-// Update
-"The latest version of Stats installed" = "Η τελευταία έκδοση του Stats είναι εγκατεστημένη";
-"Downloading..." = "Λήψη...";
-"Current version: " = "Τρέχουσα έκδοση:  ";
-"Latest version: " = "Τελευταία έκδοση:    ";
-
 // Widgets
 "Color" = "Χρώμα";
 "Label" = "Ετικέτα";
@@ -195,7 +172,6 @@
 "Colorize" = "Χρωματισμός";
 "Colorize value" = "Χρωματισμός Τιμής";
 "Additional information" = "Επιπρόσθετες πληροφορίες";
-"Reverse values order" = "Αντιστροφή σειράς τιμών";
 "Base" = "Βάση";
 "Display mode" = "Λειτουργία Προβολής";
 "One row" = "Μια σειρά";
@@ -229,8 +205,6 @@
 
 // Module Kit
 "Open module settings" = "Άνοιγμα ρυθμίσεων ενότητας";
-"Select widget" = "Επιλογή %0 widget";
-"Open widget settings" = "Άνοιγμα ρυθμίσεων widget";
 "Update interval" = "Ενημέρωση μεσοδιαστήματος";
 "Usage history" = "Ιστορικό χρήσης";
 "Details" = "Λεπτομέρειες";
@@ -251,7 +225,6 @@
 // Modules
 "Number of top processes" = "Αριθμός κορυφαίων διεργασιών";
 "Update interval for top processes" = "Ενημέρωση μεσοδιαστήματος για τις κορυφαίες διεργασίες";
-"Notification level" = "Επίπεδο Ειδοποίησης";
 "Chart color" = "Χρώμα γραφήματος";
 "Main chart scaling" = "Κλιμάκωση κύριου διαγράμματος"; // gemma4:31b
 "Scale value" = "Τιμή κλίμακας"; // translategemma:4b
@@ -275,7 +248,6 @@
 "5 minutes" = "5 λεπτά";
 "15 minutes" = "15 λεπτά";
 "CPU usage threshold" = "Όριο χρήσης CPU"; // translategemma:4b
-"CPU usage is" = "Η χρήση της CPU είναι %0"; // gemma4:31b
 "Efficiency cores" = "Ενεργειακά αποδοτικοί πύρηνες"; // gemma4:31b
 "Performance cores" = "Πύρηνες απόδοσης"; // gemma4:31b
 "System color" = "Χρώμα συστήματος"; // translategemma:4b
@@ -298,18 +270,11 @@
 // GPU
 "GPU to show" = "GPU προς εμφάνιση";
 "Show GPU type" = "Εμφάνιση τύπου GPU";
-"GPU enabled" = "Ενεργοποιημένη GPU";
-"GPU disabled" = "Απενεργοποιημένη GPU";
-"GPU temperature" = "Θερμοκρασία GPU";
 "GPU utilization" = "Χρήση GPU";
 "Vendor" = "Προμηθευτής";
 "Model" = "Μοντέλο";
 "Status" = "Κατάσταση";
 "Active" = "Ενεργή";
-"Non active" = "Μη ενεργή";
-"Fan speed" = "Ταχύτητα ανεμιστήρα";
-"Core clock" = "Ρολόι επεξεργαστή";
-"Memory clock" = "Ρολόι μνήμης";
 "Utilization" = "Χρήση";
 "Render utilization" = "Χρήση Render"; // gemma4:31b
 "Tiler utilization" = "Χρήση Tiler"; // gemma4:31b
@@ -359,7 +324,6 @@
 "Power on hours" = "Power on hours";
 
 // Sensors
-"Temperature unit" = "Μονάδα θερμοκρασίας";
 "Celsius" = "Κελσίου";
 "Fahrenheit" = "Φαρενάιτ";
 "Save the fan speed" = "Αποθήκευση ταχύτητας του ανεμιστήρα";
@@ -388,11 +352,6 @@
 "Interface" = "Διεπαφή";
 "Physical address" = "Φυσική διεύθυνση";
 "Refresh" = "Ανανέωση";
-"Click to copy public IP address" = "Πατήστε για να αντιγράψετε την δημόσια διεύθυνση IP";
-"Click to copy local IP address" = "Πατήστε για να αντιγράψετε την τοπική διεύθυνση IP";
-"Click to copy wifi name" = "Πατήστε για να αντιγράψετε το όνομα του wifi";
-"Click to copy mac address" = "Πατήστε για να αντιγράψετε την διεύθυνση mac";
-"No connection" = "Χωρίς σύνδεση";
 "Network interface" = "Διεπαφή δικτύου";
 "Total download" = "Συνολική λήψη";
 "Total upload" = "Συνολική μεταφόρτωση";
@@ -404,12 +363,9 @@
 "Standard" = "Κανονικός";
 "Security" = "Ασφάλεια";
 "Channel" = "Κανάλι";
-"Common scale" = "Κοινή κλίμακα"; // gemma4:31b
 "Autodetection" = "Αυτοανίχνευση"; // gemma4:31b
 "Widget activation threshold" = "Κατώφλι ενεργοποίησης βίντζετ"; // gemma4:31b
 "Internet connection" = "Σύνδεση στο Διαδίκτυο"; // gemma4:31b
-"Active state color" = "Χρώμα ενεργής κατάστασης"; // gemma4:31b
-"Nonactive state color" = "Χρώμα ανενεργής κατάστασης"; // gemma4:31b
 "Connectivity host" = "Φιλοξεγαστής συνδεσιμότητας"; // gemma4:31b
 "Leave empty to disable the check" = "Αφήστε κενό για να απενεργοποιήσετε τον έλεγχο"; // gemma4:31b
 "Connectivity history" = "Ιστορικό συνδεσιμότητας"; // gemma4:31b
@@ -417,7 +373,6 @@
 "Every hour" = "Κάθε ώρα"; // translategemma:4b
 "Every 12 hours" = "Κάθε 12 ώρες"; // translategemma:4b
 "Every 24 hours" = "Κάθε 24 ώρες"; // translategemma:4b
-"Network activity" = "Δραστηριότητα δικτύου"; // translategemma:4b
 "Last reset" = "Τελευταία επαναφορά πριν από %0"; // gemma4:31b
 "Latency" = "Καθυστέρηση"; // translategemma:4b
 "Upload speed" = "Μεταφόρτωση"; // gemma4:31b
@@ -465,11 +420,7 @@
 "Last charge" = "Τελευταία φόρτιση";
 "Capacity" = "Χωρητικότητα";
 "current / maximum / designed" = "τρέχουσα / μέγιστη / σχεδιασμένη";
-"Low power mode" = "Κατάστασης χαμηλής ενέργειας";
 "Percentage inside the icon" = "Ποσοστό μέσα στο εικονίδιο";
-"Colorize battery" = "Χρωματισμός μπαταρίας"; // gemma4:31b
-"Charging current" = "Ρεύμα φόρτισης"; // translategemma:4b
-"Charging Voltage" = "Τάση φόρτισης"; // translategemma:4b
 "Charger state inside the battery" = "Κατάσταση φόρτισης εντός της μπαταρίας"; // gemma4:31b
 
 

@@ -112,23 +112,10 @@
 "welcome_message" = "Kiitos, että käytät Statsia, ilmaista avoimen lähdekoodin macOS-järjestelmämonitoria valikkorivillesi.";
 "Start the application automatically when starting your Mac" = "Käynnistä sovellus automaattisesti, kun käynnistät Macin";
 "Do not start the application automatically when starting your Mac" = "Älä käynnistä sovellusta automaattisesti, kun käynnistät Macin";
-"Do everything silently in the background (recommended)" = "Tee kaikki hiljaisesti taustalla (suositeltu)";
-"Check for a new version on startup" = "Tarkista uusi versio käynnistyksen yhteydessä";
-"Check for a new version every day (once a day)" = "Tarkista uusi versio päivittäin (kerran päivässä)";
-"Check for a new version every week (once a week)" = "Tarkista uusi versio viikoittain (kerran viikossa)";
-"Check for a new version every month (once a month)" = "Tarkista uusi versio kuukausittain (kerran kuukaudessa)";
-"Never check for updates (not recommended)" = "Älä koskaan tarkista päivityksiä (ei suositeltu)";
-"Anonymous telemetry for better development decisions" = "Anonyymi telemetria parempaa tuotekehitystä varten";
-"Share anonymous telemetry data" = "Jaa anonyymit telemetriatiedot";
-"Do not share anonymous telemetry data" = "Älä jaa anonyymejä telemetriatietoja";
 "The configuration is completed" = "Määritys on valmis";
 "finish_setup_message" = "Kaikki on valmista! \n Stats on avoimen lähdekoodin työkalu, se on ilmainen ja tulee aina olemaan. \n Jos pidät siitä, voit tukea projektia, mikä on aina arvostettua!";
 
 // Alerts
-"New version available" = "Uusi versio saatavilla";
-"Click to install the new version of Stats" = "Klikkaa asentaaksesi uuden version Statsista";
-"Successfully updated" = "Päivitys onnistui";
-"Stats was updated to v" = "Stats päivitettiin versioon v%0";
 "Reset settings text" = "Kaikki sovelluksen asetukset nollataan, ja sovellus käynnistetään uudelleen. Haluatko varmasti tehdä tämän?";
 "Support text" = "Kiitos, että käytät Statsia!\n\n Tämän avoimen lähdekoodin projektin ylläpitäminen ja parantaminen vie aikaa ja resursseja. Tukesi auttaa meitä jatkossakin tarjoamaan ilmaisen ja luotettavan sovelluksen kaikille.\n\nJos Stats on mielestäsi hyödyllinen, harkitse lahjoituksen tekemistä. Jokainen pieni osa auttaa!";
 
@@ -144,14 +131,11 @@
 "Toggle the module" = "Kytke moduuli"; // gemma4:31b
 
 // Application settings
-"Update application" = "Päivitä sovellus";
-"Check for updates" = "Tarkista päivitykset";
 "At start" = "Käynnistyksessä";
 "Once per day" = "Kerran päivässä";
 "Once per week" = "Kerran viikossa";
 "Once per month" = "Kerran kuukaudessa";
 "Never" = "Ei koskaan";
-"Check for update" = "Tarkista päivitys";
 "Show icon in dock" = "Näytä kuvake telakassa";
 "Start at login" = "Käynnistä kirjautumisen yhteydessä";
 "Build number" = "Kokoonpanon numero";
@@ -163,7 +147,6 @@
 "Combined modules" = "Yhdistetyt moduulit";
 "Combined details" = "Yhdistetyt tiedot";
 "Spacing" = "Välistys"; // gemma4:31b
-"Share anonymous telemetry" = "Jaa anonyymi telemetria";
 "Choose file" = "Valitse tiedosto"; // translategemma:4b
 "Stress tests" = "Stressitestit"; // translategemma:4b
 
@@ -180,12 +163,6 @@
 "Disks" = "Levyt"; // translategemma:4b
 "Display" = "Näyttö"; // translategemma:4b
 
-// Update
-"The latest version of Stats installed" = "Stats on päivitetty viimeisimpään versioon";
-"Downloading..." = "Ladataan...";
-"Current version: " = "Nykyinen versio:  ";
-"Latest version: " = "Viimeisin versio:    ";
-
 // Widgets
 "Color" = "Väri";
 "Label" = "Tunniste";
@@ -195,7 +172,6 @@
 "Colorize" = "Värjää";
 "Colorize value" = "Värjää arvo";
 "Additional information" = "Lisätiedot";
-"Reverse values order" = "Käänteinen arvojärjestys";
 "Base" = "Perusta";
 "Display mode" = "Näyttötila";
 "One row" = "Yksi rivi";
@@ -229,8 +205,6 @@
 
 // Module Kit
 "Open module settings" = "Avaa moduulin asetukset";
-"Select widget" = "Valitse %0 widget";
-"Open widget settings" = "Avaa widgetin asetukset";
 "Update interval" = "Päivitysväli";
 "Usage history" = "Käytön historia";
 "Details" = "Tiedot";
@@ -251,7 +225,6 @@
 // Modules
 "Number of top processes" = "Suosittujen prosessien määrä";
 "Update interval for top processes" = "Suosittujen prosessien päivitysväli";
-"Notification level" = "Ilmoitustaso";
 "Chart color" = "Kaavion väri";
 "Main chart scaling" = "Pääkaavion skaalaus";
 "Scale value" = "Skaalausarvo";
@@ -275,7 +248,6 @@
 "5 minutes" = "5 minuuttia";
 "15 minutes" = "15 minuuttia";
 "CPU usage threshold" = "Suorittimen käytön raja";
-"CPU usage is" = "Suorittimen käyttö on %0";
 "Efficiency cores" = "Tehokkuusytimet";
 "Performance cores" = "Suorituskykyytimet";
 "System color" = "Järjestelmän väri";
@@ -298,18 +270,11 @@
 // GPU
 "GPU to show" = "Näytettävä GPU";
 "Show GPU type" = "Näytä GPU-tyyppi";
-"GPU enabled" = "GPU käytössä";
-"GPU disabled" = "GPU pois käytöstä";
-"GPU temperature" = "GPU:n lämpötila";
 "GPU utilization" = "GPU:n käyttö";
 "Vendor" = "Valmistaja";
 "Model" = "Malli";
 "Status" = "Tila";
 "Active" = "Aktiivinen";
-"Non active" = "Ei aktiivinen";
-"Fan speed" = "Tuuletinnopeus";
-"Core clock" = "Ytimen kellotaajuus";
-"Memory clock" = "Muistin kellotaajuus";
 "Utilization" = "Käyttöaste";
 "Render utilization" = "Renderöinnin käyttöaste";
 "Tiler utilization" = "Tilerin käyttöaste";
@@ -359,7 +324,6 @@
 "Power on hours" = "Power on hours";
 
 // Sensors
-"Temperature unit" = "Lämpötilan yksikkö";
 "Celsius" = "Celsius";
 "Fahrenheit" = "Fahrenheit";
 "Save the fan speed" = "Tallenna tuulettimen nopeus";
@@ -388,11 +352,6 @@
 "Interface" = "Liitäntä";
 "Physical address" = "Fyysinen osoite";
 "Refresh" = "Päivitä";
-"Click to copy public IP address" = "Kopioi julkinen IP-osoite napsauttamalla";
-"Click to copy local IP address" = "Kopioi paikallinen IP-osoite napsauttamalla";
-"Click to copy wifi name" = "Kopioi Wi-Fi-nimi napsauttamalla";
-"Click to copy mac address" = "Kopioi MAC-osoite napsauttamalla";
-"No connection" = "Ei yhteyttä";
 "Network interface" = "Verkkoliitäntä";
 "Total download" = "Ladattu yhteensä";
 "Total upload" = "Lähetetty yhteensä";
@@ -404,12 +363,9 @@
 "Standard" = "Standardi";
 "Security" = "Turvallisuus";
 "Channel" = "Kanava";
-"Common scale" = "Yleinen skaala";
 "Autodetection" = "Automaattinen tunnistus";
 "Widget activation threshold" = "Widgetin aktivoinnin raja";
 "Internet connection" = "Internet-yhteys";
-"Active state color" = "Aktiivitilan väri";
-"Nonactive state color" = "Ei-aktiivitilan väri";
 "Connectivity host" = "Yhteyden isäntä";
 "Leave empty to disable the check" = "Jätä tyhjäksi poistaaksesi tarkistuksen käytöstä";
 "Connectivity history" = "Yhteyshistoria";
@@ -417,7 +373,6 @@
 "Every hour" = "Joka tunti";
 "Every 12 hours" = "Joka 12. tunti";
 "Every 24 hours" = "Joka 24. tunti";
-"Network activity" = "Verkkoaktiivisuus";
 "Last reset" = "Viimeksi nollattu %0 sitten";
 "Latency" = "Viive";
 "Upload speed" = "Lähetysnopeus";
@@ -465,11 +420,7 @@
 "Last charge" = "Viimeinen lataus";
 "Capacity" = "Kapasiteetti";
 "current / maximum / designed" = "nykyinen / maksimi / suunniteltu";
-"Low power mode" = "Virransäästötila";
 "Percentage inside the icon" = "Prosentti kuvakkeen sisällä";
-"Colorize battery" = "Värjää akku";
-"Charging current" = "Latausvirta";
-"Charging Voltage" = "Latausjännite";
 "Charger state inside the battery" = "Lataustila akun sisällä"; // gemma4:31b
 
 

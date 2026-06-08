@@ -112,23 +112,10 @@
 "welcome_message" = "당신의 메뉴 바를 위한 무료 오픈 소스 macOS 시스템 모니터, Stats를 사용해 주셔서 감사합니다.";
 "Start the application automatically when starting your Mac" = "Mac 시동 시 애플리케이션 자동 시작";
 "Do not start the application automatically when starting your Mac" = "Mac 시동 시 애플리케이션 자동 시작 안함";
-"Do everything silently in the background (recommended)" = "모든 것을 백그라운드에서 조용하게 처리 (권장)";
-"Check for a new version on startup" = "시작할 때 새 버전 확인";
-"Check for a new version every day (once a day)" = "매일 새 버전 확인 (하루에 한 번)";
-"Check for a new version every week (once a week)" = "주마다 새 버전 확인 (일주일에 한 번)";
-"Check for a new version every month (once a month)" = "달마다 새 버전 확인 (한 달에 한 번)";
-"Never check for updates (not recommended)" = "업데이트 확인 안 함 (추천하지 않음)";
-"Anonymous telemetry for better development decisions" = "익명 사용정보를 통한 더 나은 개발 방향 결정";
-"Share anonymous telemetry data" = "익명 사용정보를 공유합니다";
-"Do not share anonymous telemetry data" = "익명 사용정보를 공유하지 않습니다";
 "The configuration is completed" = "설정이 완료되었습니다";
 "finish_setup_message" = "모든 것이 설정되었습니다! \n Stats는 무료 오픈 소스 도구이며 앞으로도 그럴 것입니다. \n 이 애플리케이션이 마음에 드셨다면 프로젝트를 후원 하실 수 있습니다. 늘 감사합니다!";
 
 // Alerts
-"New version available" = "새로운 버전을 이용할 수 있습니다";
-"Click to install the new version of Stats" = "클릭하여 새 버전의 Stats 설치";
-"Successfully updated" = "성공적으로 업데이트되었습니다";
-"Stats was updated to v" = "Stats가 v%0 버전으로 업데이트되었습니다";
 "Reset settings text" = "모든 애플리케이션 설정이 재설정되고 다시 시작됩니다. 계속 진행하시겠습니까?";
 "Support text" = "Stats를 사용해 주셔서 감사합니다!\n\n 이 오픈 소스 프로젝트를 유지 관리하고 개선하는 데는 시간과 리소스가 필요합니다. 여러분의 지원은 모든 사람에게 신뢰할 수 있는 무료 애플리케이션을 계속 제공하는 데 도움이 됩니다.\n\nStats가 도움이 된다면 기여를 고려해 주세요. 여러분의 작은 도움이 큰 힘이 됩니다!";
 
@@ -144,14 +131,11 @@
 "Toggle the module" = "모듈 전환";
 
 // Application settings
-"Update application" = "애플리케이션 업데이트";
-"Check for updates" = "업데이트 확인";
 "At start" = "시작할 때";
 "Once per day" = "하루에 한 번";
 "Once per week" = "일주일에 한 번";
 "Once per month" = "한 달에 한 번";
 "Never" = "확인하지 않음";
-"Check for update" = "업데이트 확인";
 "Show icon in dock" = "Dock에 아이콘 표시";
 "Start at login" = "로그인 시 시작";
 "Build number" = "빌드 번호";
@@ -163,7 +147,6 @@
 "Combined modules" = "전체 모듈";
 "Combined details" = "전체 세부 정보";
 "Spacing" = "간격";
-"Share anonymous telemetry" = "익명 사용정보 공유";
 "Choose file" = "파일 선택";
 "Stress tests" = "스트레스 테스트 진행하기";
 
@@ -180,12 +163,6 @@
 "Disks" = "디스크";
 "Display" = "디스플레이";
 
-// Update
-"The latest version of Stats installed" = "최신 버전의 Stats가 설치되어 있습니다";
-"Downloading..." = "다운로드 중...";
-"Current version: " = "현재 버전:  ";
-"Latest version: " = "최신 버전:    ";
-
 // Widgets
 "Color" = "색상";
 "Label" = "레이블";
@@ -195,7 +172,6 @@
 "Colorize" = "색상화";
 "Colorize value" = "값 색상화";
 "Additional information" = "추가 정보";
-"Reverse values order" = "값 순서 반전";
 "Base" = "단위";
 "Display mode" = "표기 방식";
 "One row" = "한 줄";
@@ -229,8 +205,6 @@
 
 // Module Kit
 "Open module settings" = "모듈 설정 열기";
-"Select widget" = "%0 위젯 선택";
-"Open widget settings" = "위젯 설정 열기";
 "Update interval" = "업데이트 주기";
 "Usage history" = "사용 기록";
 "Details" = "세부 사항";
@@ -251,7 +225,6 @@
 // Modules
 "Number of top processes" = "상위 프로세스 수";
 "Update interval for top processes" = "상위 프로세스의 업데이트 주기";
-"Notification level" = "알림 수준";
 "Chart color" = "도표 색상";
 "Main chart scaling" = "메인 차트 스케일";
 "Scale value" = "스케일 값";
@@ -275,7 +248,6 @@
 "5 minutes" = "5분";
 "15 minutes" = "15분";
 "CPU usage threshold" = "CPU 사용량 임계값";
-"CPU usage is" = "CPU 사용량 %0";
 "Efficiency cores" = "효율 코어";
 "Performance cores" = "성능 코어";
 "System color" = "시스템 색상";
@@ -298,18 +270,11 @@
 // GPU
 "GPU to show" = "표시할 GPU";
 "Show GPU type" = "GPU 유형 표시";
-"GPU enabled" = "GPU 사용함";
-"GPU disabled" = "GPU 사용 안 함";
-"GPU temperature" = "GPU 온도";
 "GPU utilization" = "GPU 사용률";
 "Vendor" = "공급 업체";
 "Model" = "모델";
 "Status" = "상태";
 "Active" = "활성";
-"Non active" = "비활성";
-"Fan speed" = "팬 속도";
-"Core clock" = "코어 클럭";
-"Memory clock" = "메모리 클럭";
 "Utilization" = "사용률";
 "Render utilization" = "렌더 사용률";
 "Tiler utilization" = "타일 사용률";
@@ -359,7 +324,6 @@
 "Power on hours" = "Power on hours";
 
 // Sensors
-"Temperature unit" = "온도 단위";
 "Celsius" = "섭씨";
 "Fahrenheit" = "화씨";
 "Save the fan speed" = "팬 속도 저장";
@@ -388,11 +352,6 @@
 "Interface" = "인터페이스";
 "Physical address" = "MAC 주소";
 "Refresh" = "새로고침";
-"Click to copy public IP address" = "공개 IP 주소를 복사하려면 클릭하세요";
-"Click to copy local IP address" = "로컬 IP 주소를 복사하려면 클릭하세요";
-"Click to copy wifi name" = "WIFI 이름을 복사하려면 클릭하세요";
-"Click to copy mac address" = "MAC 주소를 복사하려면 클릭하세요";
-"No connection" = "연결되지 않음";
 "Network interface" = "네트워크 인터페이스";
 "Total download" = "총 다운로드";
 "Total upload" = "총 업로드";
@@ -404,12 +363,9 @@
 "Standard" = "표준";
 "Security" = "보안";
 "Channel" = "채널";
-"Common scale" = "통일된 스케일 사용";
 "Autodetection" = "자동 감지";
 "Widget activation threshold" = "위젯 활성화 임계값";
 "Internet connection" = "인터넷 연결";
-"Active state color" = "활성 상태 색상";
-"Nonactive state color" = "비활성 상태 색상";
 "Connectivity host" = "연결성 확인 호스트";
 "Leave empty to disable the check" = "연결성 확인을 비활성화하려면 이 란을 비워 두세요";
 "Connectivity history" = "연결성 기록";
@@ -417,7 +373,6 @@
 "Every hour" = "매 시간마다";
 "Every 12 hours" = "12시간마다";
 "Every 24 hours" = "24시간마다";
-"Network activity" = "네트워크 활동";
 "Last reset" = "마지막 초기화 이후 %0 경과";
 "Latency" = "레이턴시";
 "Upload speed" = "업로드 속도";
@@ -465,11 +420,7 @@
 "Last charge" = "마지막 충전";
 "Capacity" = "용량";
 "current / maximum / designed" = "현재 / 최대 / 설계";
-"Low power mode" = "저전력 모드";
 "Percentage inside the icon" = "아이콘 속에 백분율";
-"Colorize battery" = "배터리 색상 표시";
-"Charging current" = "충전 전류"; // translategemma:4b
-"Charging Voltage" = "충전 전압"; // translategemma:4b
 "Charger state inside the battery" = "배터리 내부의 충전 상태"; // gemma4:31b
 
 

@@ -112,23 +112,10 @@
 "welcome_message" = "Tak for, at du bruger Stats, det gratis, open source, program til at overvåge din Mac fra menulinjen.";
 "Start the application automatically when starting your Mac" = "Start programmet automatisk når din Mac tænder";
 "Do not start the application automatically when starting your Mac" = "Start ikke automatisk programmet når din Mac tænder";
-"Do everything silently in the background (recommended)" = "Foretag alle handlinger i baggrunden (anbefalet)";
-"Check for a new version on startup" = "Søg efter ny opdatering ved programstart";
-"Check for a new version every day (once a day)" = "Søg efter ny opdatering hver dag (en gang dagligt)";
-"Check for a new version every week (once a week)" = "Søg efter ny opdatering hver uge (en gang om ugen)";
-"Check for a new version every month (once a month)" = "Søg efter ny opdatering hver måned (en gang hver måned)";
-"Never check for updates (not recommended)" = "Søg aldrig efter nye opdateringer (ikke anbefalet)";
-"Anonymous telemetry for better development decisions" = "Anonym brugsdata til at forbedre udviklingen af programmet";
-"Share anonymous telemetry data" = "Del anonym data om brugen af programmet";
-"Do not share anonymous telemetry data" = "Del ikke anonym data om brugen af programmet";
 "The configuration is completed" = "Opsætning gennemført!";
 "finish_setup_message" = "Alting er opsat! \n Stats er et open source værktøj, det er gratis og vil altid være det. \n Hvis du nyder Stats er du meget velkommen til at støtte projektet!";
 
 // Alerts
-"New version available" = "Ny udgave tilgængelig";
-"Click to install the new version of Stats" = "Klik for at installere den nye udgave af Stats";
-"Successfully updated" = "Opdatering succesfuld";
-"Stats was updated to v" = "Stats er blevet opdateret til v%0";
 "Reset settings text" = "Alle programmets indstillinger vil blive nulstillet og programmet genstartes. Er du sikker på du vil fortsætte?";
 "Support text" = "Tak, fordi du bruger Stats!\n\n Det tager tid og ressourcer at vedligeholde og forbedre dette open source-projekt. Din støtte hjælper os med at fortsætte med at levere en gratis og pålidelig applikation til alle.\n\nHvis du finder Stats nyttigt, kan du overveje at give et bidrag. Hver eneste lille smule hjælper!";
 
@@ -144,14 +131,11 @@
 "Toggle the module" = "Skift modulet"; // gemma4:31b
 
 // Application settings
-"Update application" = "Opdatér applikation";
-"Check for updates" = "Søg efter opdateringer";
 "At start" = "Ved opstart";
 "Once per day" = "Én gang om dagen";
 "Once per week" = "Én gang om ugen";
 "Once per month" = "Én gang om måneden";
 "Never" = "Aldrig";
-"Check for update" = "Søg efter opdatering";
 "Show icon in dock" = "Vis ikon i Dock";
 "Start at login" = "Start ved login";
 "Build number" = "Build-nummer"; // gemma4:31b
@@ -163,7 +147,6 @@
 "Combined modules" = "Kombinerede moduler";
 "Combined details" = "Kombinerede detaljer"; // gemma4:31b
 "Spacing" = "Mellemrum";
-"Share anonymous telemetry" = "Del anonym brugsdata";
 "Choose file" = "Vælg fil"; // translategemma:4b
 "Stress tests" = "Stresstests"; // gemma4:31b
 
@@ -180,12 +163,6 @@
 "Disks" = "Diske"; // gemma4:31b
 "Display" = "Skærm"; // translategemma:4b
 
-// Update
-"The latest version of Stats installed" = "Den nyeste udgave af Stats er installeret";
-"Downloading..." = "Downloader...";
-"Current version: " = "Nuværende version:  ";
-"Latest version: " = "Nyeste version:    ";
-
 // Widgets
 "Color" = "Farve";
 "Label" = "Tekstmærke";
@@ -195,7 +172,6 @@
 "Colorize" = "Farve";
 "Colorize value" = "Farve værdi";
 "Additional information" = "Yderligere information";
-"Reverse values order" = "Omvend værdi-rækkefølge";
 "Base" = "Basis"; // gemma4:31b
 "Display mode" = "Visningstilstand";
 "One row" = "Én række";
@@ -229,8 +205,6 @@
 
 // Module Kit
 "Open module settings" = "Åben indstillinger for moduler";
-"Select widget" = "Vælg %0 widget";
-"Open widget settings" = "Åben indstillinger for widgets";
 "Update interval" = "Opdateringsinterval";
 "Usage history" = "Brugshistorik";
 "Details" = "Detaljer";
@@ -251,7 +225,6 @@
 // Modules
 "Number of top processes" = "Antal topprocesser";
 "Update interval for top processes" = "Opdateringsinterval for topprocesser";
-"Notification level" = "Notifikationsniveau";
 "Chart color" = "Grafens farve";
 "Main chart scaling" = "Skalering af hovedgrafen"; // gemma4:31b
 "Scale value" = "Skalaværdi"; // gemma4:31b
@@ -275,7 +248,6 @@
 "5 minutes" = "5 minuter";
 "15 minutes" = "15 minuter";
 "CPU usage threshold" = "Grænseværdi for CPU brug";
-"CPU usage is" = "CPU brug er %0";
 "Efficiency cores" = "Efficiency kerner";
 "Performance cores" = "Performance kerner";
 "System color" = "Systemets farve";
@@ -298,18 +270,11 @@
 // GPU
 "GPU to show" = "GPU der vises";
 "Show GPU type" = "Vis GPU type";
-"GPU enabled" = "GPU aktiveret";
-"GPU disabled" = "GPU deaktiveret";
-"GPU temperature" = "GPU temperatur";
 "GPU utilization" = "GPU brugsniveau";
 "Vendor" = "Leverandør";
 "Model" = "Model";
 "Status" = "Status";
 "Active" = "Aktiv";
-"Non active" = "Ikke aktiv";
-"Fan speed" = "Blæserhastighed";
-"Core clock" = "Kærnefrekvens";
-"Memory clock" = "Hukommelsesfrekvens";
 "Utilization" = "Brugsniveau";
 "Render utilization" = "Brug af rendering";
 "Tiler utilization" = "Brug af tiler";
@@ -359,7 +324,6 @@
 "Power on hours" = "Power on hours";
 
 // Sensors
-"Temperature unit" = "Temperature unit";
 "Celsius" = "Celsius";
 "Fahrenheit" = "Fahrenheit";
 "Save the fan speed" = "Save the fan speed";
@@ -379,7 +343,6 @@
 "Right fan" = "Right";
 "Fastest fan" = "Fastest";
 "Sensor to show" = "Sensor to show";
-"Temperature unit" = "Temperaturenhed";
 "Celsius" = "Celsius";
 "Uploading" = "Upload";
 "Downloading" = "Download";
@@ -388,11 +351,6 @@
 "Interface" = "Interface";
 "Physical address" = "Physical address";
 "Refresh" = "Refresh";
-"Click to copy public IP address" = "Click to copy public IP address";
-"Click to copy local IP address" = "Click to copy local IP address";
-"Click to copy wifi name" = "Click to copy wifi name";
-"Click to copy mac address" = "Click to copy mac address";
-"No connection" = "No connection";
 "Network interface" = "Network interface";
 "Total download" = "Total download";
 "Total upload" = "Total upload";
@@ -404,12 +362,9 @@
 "Standard" = "Standard";
 "Security" = "Security";
 "Channel" = "Channel";
-"Common scale" = "Common scale";
 "Autodetection" = "Autodetection";
 "Widget activation threshold" = "Widget activation threshold";
 "Internet connection" = "Internet connection";
-"Active state color" = "Active state color";
-"Nonactive state color" = "Nonactive state color";
 "Connectivity host" = "Connectivity host";
 "Leave empty to disable the check" = "Leave empty to disable the check";
 "Connectivity history" = "Connectivity history";
@@ -417,7 +372,6 @@
 "Every hour" = "Every hour";
 "Every 12 hours" = "Every 12 hours";
 "Every 24 hours" = "Every 24 hours";
-"Network activity" = "Network activity";
 "Last reset" = "Last reset %0 ago";
 "Latency" = "Latency";
 "Upload speed" = "Upload";
@@ -465,11 +419,7 @@
 "Last charge" = "Last charge";
 "Capacity" = "Capacity";
 "current / maximum / designed" = "current / maximum / designed";
-"Low power mode" = "Low power mode";
 "Percentage inside the icon" = "Percentage inside the icon";
-"Colorize battery" = "Colorize battery";
-"Charging current" = "Charging current";
-"Charging Voltage" = "Charging voltage";
 "Charger state inside the battery" = "Charger state inside the battery";
 "Fan" = "Blæser";
 "HID sensors" = "HID sensorer";
@@ -536,11 +486,6 @@
 "Interface" = "Grænseflade"; // translategemma:4b
 "Physical address" = "Fysisk adresse";
 "Refresh" = "Genopfrisk";
-"Click to copy public IP address" = "Klik for at kopiere offentlig IP";
-"Click to copy local IP address" = "Klik for at kopiere lokal IP";
-"Click to copy wifi name" = "Klik for at kopiere wifi-navn";
-"Click to copy mac address" = "Klik for at kopiere mac-adresse";
-"No connection" = "Ingen forbindelse";
 "Network interface" = "Netværksinterface";
 "Total download" = "Download i alt";
 "Total upload" = "Upload i alt";
@@ -552,12 +497,9 @@
 "Standard" = "Standard";
 "Security" = "Sikkerhed";
 "Channel" = "Kanal";
-"Common scale" = "Ens skalering";
 "Autodetection" = "Automatisk";
 "Widget activation threshold" = "Grænseværdi for aktivering af widget";
 "Internet connection" = "Internetforbindelse";
-"Active state color" = "Aktiv farve";
-"Nonactive state color" = "Inaktiv farve";
 "Connectivity host" = "Host for forbindelse"; // translategemma:4b
 "Leave empty to disable the check" = "Lad feltet være tom for at deaktivere tjekket";
 "Connectivity history" = "Forbindelseshistorik";
@@ -565,7 +507,6 @@
 "Every hour" = "Hver time";
 "Every 12 hours" = "Hver 12 timer";
 "Every 24 hours" = "Hver 24 timer";
-"Network activity" = "Netværksaktivitet";
 "Last reset" = "Sidste nulstilling %0 siden";
 "Latency" = "Forsinkelse"; // translategemma:4b
 "Upload speed" = "Upload";
@@ -613,11 +554,7 @@
 "Last charge" = "Sidst opladt";
 "Capacity" = "Kapacitet";
 "current / maximum / designed" = "nuværende / maksimal / designet"; // translategemma:4b
-"Low power mode" = "Energibesparende funktion";
 "Percentage inside the icon" = "Procenttegn i ikonet";
-"Colorize battery" = "Farvelæg batteri";
-"Charging current" = "Lade-strøm"; // translategemma:4b
-"Charging Voltage" = "Opladningsspænding"; // translategemma:4b
 "Charger state inside the battery" = "Tilstand af opladningssystemet inde i batteriet"; // translategemma:4b
 
 

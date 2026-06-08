@@ -112,23 +112,10 @@
 "welcome_message" = "Vielen Dank, dass Sie Stats verwenden – einen kostenlosen Open-Source-Systemmonitor für Ihre macOS-Menüleiste.";
 "Start the application automatically when starting your Mac" = "Die App automatisch beim Starten Ihres Mac starten";
 "Do not start the application automatically when starting your Mac" = "Die App nicht automatisch beim Starten Ihres Mac starten";
-"Do everything silently in the background (recommended)" = "Alles lautlos im Hintergrund ausführen (empfohlen)";
-"Check for a new version on startup" = "Beim Start nach einer neuen Version suchen";
-"Check for a new version every day (once a day)" = "Täglich nach einer neuen Version suchen (einmal pro Tag)";
-"Check for a new version every week (once a week)" = "Wöchentlich nach einer neuen Version suchen (einmal pro Woche)";
-"Check for a new version every month (once a month)" = "Monatlich nach einer neuen Version suchen (einmal pro Monat)";
-"Never check for updates (not recommended)" = "Nie nach Updates suchen (nicht empfohlen)";
-"Anonymous telemetry for better development decisions" = "Anonyme Telemetrie für bessere Entwicklungsentscheidungen";
-"Share anonymous telemetry data" = "Anonyme Telemetriedaten teilen";
-"Do not share anonymous telemetry data" = "Keine anonymen Telemetriedaten teilen";
 "The configuration is completed" = "Die Einrichtung ist abgeschlossen";
 "finish_setup_message" = "Alles ist eingerichtet! \n Stats ist ein Open-Source-Tool, das kostenlos ist und immer kostenlos bleiben wird. \n Wenn es Ihnen gefällt, können Sie das Projekt unterstützen – das wird immer geschätzt!";
 
 // Alerts
-"New version available" = "Neue Version verfügbar";
-"Click to install the new version of Stats" = "Klicken, um die neue Version von Stats zu installieren";
-"Successfully updated" = "Erfolgreich aktualisiert";
-"Stats was updated to v" = "Stats wurde auf v%0 aktualisiert";
 "Reset settings text" = "Alle Einstellungen der App werden zurückgesetzt und die App wird neu gestartet. Sind Sie sicher, dass Sie das tun möchten?";
 "Support text" = "Vielen Dank, dass Sie Stats verwenden!\n\n Die Pflege und Verbesserung dieses Open-Source-Projekts erfordert Zeit und Ressourcen. Ihre Unterstützung hilft uns, weiterhin eine kostenlose und zuverlässige App für alle bereitzustellen.\n\nWenn Sie Stats hilfreich finden, erwägen Sie bitte einen Beitrag. Jede Kleinigkeit hilft!";
 
@@ -144,14 +131,11 @@
 "Toggle the module" = "Modul umschalten";
 
 // Application settings
-"Update application" = "App aktualisieren";
-"Check for updates" = "Nach Updates suchen";
 "At start" = "Beim Start";
 "Once per day" = "Einmal pro Tag";
 "Once per week" = "Einmal pro Woche";
 "Once per month" = "Einmal pro Monat";
 "Never" = "Nie";
-"Check for update" = "Nach Update suchen";
 "Show icon in dock" = "Symbol im Dock anzeigen";
 "Start at login" = "Bei Anmeldung starten";
 "Build number" = "Build-Nummer";
@@ -163,7 +147,6 @@
 "Combined modules" = "Kombinierte Module";
 "Combined details" = "Kombinierte Details";
 "Spacing" = "Abstand";
-"Share anonymous telemetry" = "Anonyme Telemetrie teilen";
 "Choose file" = "Datei auswählen";
 "Stress tests" = "Stresstests";
 
@@ -180,12 +163,6 @@
 "Disks" = "Festplatten";
 "Display" = "Bildschirm";
 
-// Update
-"The latest version of Stats installed" = "Die neueste Version von Stats ist installiert";
-"Downloading..." = "Wird heruntergeladen …";
-"Current version: " = "Aktuelle Version:  ";
-"Latest version: " = "Neueste Version:   ";
-
 // Widgets
 "Color" = "Farbe";
 "Label" = "Beschriftung";
@@ -195,7 +172,6 @@
 "Colorize" = "Einfärben";
 "Colorize value" = "Wert einfärben";
 "Additional information" = "Zusätzliche Informationen";
-"Reverse values order" = "Wertereihenfolge umkehren";
 "Base" = "Basis";
 "Display mode" = "Anzeigemodus";
 "One row" = "Eine Zeile";
@@ -229,8 +205,6 @@
 
 // Module Kit
 "Open module settings" = "Modul-Einstellungen öffnen";
-"Select widget" = "%0-Widget auswählen";
-"Open widget settings" = "Widget-Einstellungen öffnen";
 "Update interval" = "Aktualisierungsintervall";
 "Usage history" = "Nutzungsverlauf";
 "Details" = "Details";
@@ -251,7 +225,6 @@
 // Modules
 "Number of top processes" = "Anzahl der Top-Prozesse";
 "Update interval for top processes" = "Aktualisierungsintervall für Top-Prozesse";
-"Notification level" = "Benachrichtigungsstufe";
 "Chart color" = "Diagrammfarbe";
 "Main chart scaling" = "Hauptdiagramm-Skalierung";
 "Scale value" = "Skalierungswert";
@@ -275,7 +248,6 @@
 "5 minutes" = "5 Minuten";
 "15 minutes" = "15 Minuten";
 "CPU usage threshold" = "CPU-Auslastungsschwelle";
-"CPU usage is" = "CPU-Auslastung ist %0";
 "Efficiency cores" = "Effizienzkerne";
 "Performance cores" = "Leistungskerne";
 "System color" = "Systemfarbe";
@@ -298,18 +270,11 @@
 // GPU
 "GPU to show" = "Anzuzeigende GPU";
 "Show GPU type" = "GPU-Typ anzeigen";
-"GPU enabled" = "GPU aktiviert";
-"GPU disabled" = "GPU deaktiviert";
-"GPU temperature" = "GPU-Temperatur";
 "GPU utilization" = "GPU-Auslastung";
 "Vendor" = "Hersteller";
 "Model" = "Modell";
 "Status" = "Status";
 "Active" = "Aktiv";
-"Non active" = "Inaktiv";
-"Fan speed" = "Lüftergeschwindigkeit";
-"Core clock" = "Kerntakt";
-"Memory clock" = "Speichertakt";
 "Utilization" = "Auslastung";
 "Render utilization" = "Render-Auslastung";
 "Tiler utilization" = "Tiler-Auslastung";
@@ -359,7 +324,6 @@
 "Power on hours" = "Power on hours";
 
 // Sensors
-"Temperature unit" = "Temperatureinheit";
 "Celsius" = "Celsius";
 "Fahrenheit" = "Fahrenheit";
 "Save the fan speed" = "Lüftergeschwindigkeit speichern";
@@ -388,11 +352,6 @@
 "Interface" = "Schnittstelle";
 "Physical address" = "Physische Adresse";
 "Refresh" = "Aktualisieren";
-"Click to copy public IP address" = "Klicken, um die öffentliche IP-Adresse zu kopieren";
-"Click to copy local IP address" = "Klicken, um die lokale IP-Adresse zu kopieren";
-"Click to copy wifi name" = "Klicken, um den WLAN-Namen zu kopieren";
-"Click to copy mac address" = "Klicken, um die MAC-Adresse zu kopieren";
-"No connection" = "Keine Verbindung";
 "Network interface" = "Netzwerkschnittstelle";
 "Total download" = "Download gesamt";
 "Total upload" = "Upload gesamt";
@@ -404,12 +363,9 @@
 "Standard" = "Standard";
 "Security" = "Sicherheit";
 "Channel" = "Kanal";
-"Common scale" = "Gemeinsame Skala";
 "Autodetection" = "Automatische Erkennung";
 "Widget activation threshold" = "Widget-Aktivierungsschwelle";
 "Internet connection" = "Internetverbindung";
-"Active state color" = "Farbe für aktiven Zustand";
-"Nonactive state color" = "Farbe für inaktiven Zustand";
 "Connectivity host" = "Verbindungshost";
 "Leave empty to disable the check" = "Leer lassen, um die Prüfung zu deaktivieren";
 "Connectivity history" = "Verbindungsverlauf";
@@ -417,7 +373,6 @@
 "Every hour" = "Jede Stunde";
 "Every 12 hours" = "Alle 12 Stunden";
 "Every 24 hours" = "Alle 24 Stunden";
-"Network activity" = "Netzwerkaktivität";
 "Last reset" = "Letzte Zurücksetzung vor %0";
 "Latency" = "Latenz";
 "Upload speed" = "Uploadgeschwindigkeit";
@@ -465,11 +420,7 @@
 "Last charge" = "Letzte Ladung";
 "Capacity" = "Kapazität";
 "current / maximum / designed" = "aktuell / maximal / geplant";
-"Low power mode" = "Stromsparmodus";
 "Percentage inside the icon" = "Prozentanzeige im Symbol";
-"Colorize battery" = "Batterie einfärben";
-"Charging current" = "Ladestrom";
-"Charging Voltage" = "Ladespannung";
 "Charger state inside the battery" = "Ladegerätestatus im Batteriesymbol";
 
 

@@ -112,23 +112,10 @@
 "welcome_message" = "Köszönjük, hogy a Stats programot használod, ami egy ingyenes, nyílt forráskódú, macOS rendszer monitorozó alkalmazás a menüsorodba.";
 "Start the application automatically when starting your Mac" = "Az alkalmazás indítása a rendszer indulásakor";
 "Do not start the application automatically when starting your Mac" = "Ne indítsa az alkalmazást a rendszer indulásakor";
-"Do everything silently in the background (recommended)" = "Végezzen mindent csendben a háttérben (ajánlott)";
-"Check for a new version on startup" = "Új verzió keresése indításkor";
-"Check for a new version every day (once a day)" = "Új verzió keresése minden nap (napi egyszer)";
-"Check for a new version every week (once a week)" = "Új verzió keresése minden héten (heti egyszer)";
-"Check for a new version every month (once a month)" = "Új verzió keresése minden hónapban (havi egyszer)";
-"Never check for updates (not recommended)" = "Ne keressen frissítéseket (nem ajánlott)";
-"Anonymous telemetry for better development decisions" = "Névtelen telemetria a jobb fejlesztői döntések érdekében";
-"Share anonymous telemetry data" = "Névtelen telemetriai adatok megosztása";
-"Do not share anonymous telemetry data" = "Ne osszon meg névtelen telemetriai adatokat";
 "The configuration is completed" = "A konfiguráció befejezve";
 "finish_setup_message" = "Minden beállítva!\nA Stats egy nyílt forráskódú eszköz, ami ingyenes és az is marad.\nHa hasznosnak találod, támogathatod a fejlesztését, mindig nagyra értékeljük!";
 
 // Alerts
-"New version available" = "Új verzió érhető el";
-"Click to install the new version of Stats" = "Kattintson a Stats új verziójának telepítéséhez";
-"Successfully updated" = "Sikeres frissítés";
-"Stats was updated to v" = "A Stats sikeresen frissítve lett a(z) v%0 verzióra";
 "Reset settings text" = "Minden alkalmazás beállítás alaphelyzetbe fog állni, és az alkalmazás újra fog indulni. Biztosan ezt szeretnéd?";
 "Support text" = "Köszönjük, hogy használja a Stats-t!\n\n A nyílt forráskódú projekt fenntartása és fejlesztése időt és erőforrásokat igényel. Az Ön támogatása segít nekünk abban, hogy továbbra is ingyenes és megbízható alkalmazást nyújtsunk mindenkinek.\n\nHa hasznosnak találja a Stats-t, kérjük, fontolja meg, hogy hozzájáruljon. Minden kis aprócska összeg segít!";
 
@@ -144,14 +131,11 @@
 "Toggle the module" = "Kapcsolja a modult"; // gemma4:31b
 
 // Application settings
-"Update application" = "Alkalmazás frissítése";
-"Check for updates" = "Frissítések keresése";
 "At start" = "Induláskor";
 "Once per day" = "Naponta";
 "Once per week" = "Hetente";
 "Once per month" = "Havonta";
 "Never" = "Soha";
-"Check for update" = "Frissítés keresése";
 "Show icon in dock" = "Ikon megjelenítése a Dockban";
 "Start at login" = "Alkalmazás indítása bejelentkezéskor";
 "Build number" = "Verziószám";
@@ -163,7 +147,6 @@
 "Combined modules" = "Egyesített modulok";
 "Combined details" = "Kombinált részletek"; // gemma4:31b
 "Spacing" = "Helyköz";
-"Share anonymous telemetry" = "Telemetria megosztása névtelenül";
 "Choose file" = "Fájl választása"; // gemma4:31b
 "Stress tests" = "Terhelési tesztek"; // gemma4:31b
 
@@ -180,12 +163,6 @@
 "Disks" = "Lemezek"; // gemma4:31b
 "Display" = "Kijelző"; // gemma4:31b
 
-// Update
-"The latest version of Stats installed" = "A Stats legújabb verziója van telepítve";
-"Downloading..." = "Letöltés...";
-"Current version: " = "Jelenlegi verzió:  ";
-"Latest version: " = "Legújabb verzió:    ";
-
 // Widgets
 "Color" = "Szín";
 "Label" = "Címke megjelenítése";
@@ -195,7 +172,6 @@
 "Colorize" = "Színezés";
 "Colorize value" = "Érték színezése";
 "Additional information" = "További információk megjelenítése";
-"Reverse values order" = "Értékek sorrendjének megfordítása";
 "Base" = "Mértékegység";
 "Display mode" = "Megjelenítés mód";
 "One row" = "Egy sor";
@@ -229,8 +205,6 @@
 
 // Module Kit
 "Open module settings" = "Modul beállításainak megnyitása";
-"Select widget" = "%0 modul kiválasztása";
-"Open widget settings" = "Modul beállításainak megnyitása";
 "Update interval" = "Frissítési időköz";
 "Usage history" = "Használati előzmények";
 "Details" = "Részletek";
@@ -251,7 +225,6 @@
 // Modules
 "Number of top processes" = "Top folyamatok száma";
 "Update interval for top processes" = "Top folyamatok frissítési időköze";
-"Notification level" = "Értesítési szint";
 "Chart color" = "Diagram színe";
 "Main chart scaling" = "Főgrafikon skálázása"; // gemma4:31b
 "Scale value" = "Skála értéke"; // gemma4:31b
@@ -275,7 +248,6 @@
 "5 minutes" = "5 perc";
 "15 minutes" = "15 perc";
 "CPU usage threshold" = "CPU használati küszöb";
-"CPU usage is" = "%0 a CPU használat";
 "Efficiency cores" = "Energiatakarékos magok";
 "Performance cores" = "Teljesítményre optimalizált magok";
 "System color" = "Rendszer színe";
@@ -298,18 +270,11 @@
 // GPU
 "GPU to show" = "Megjelenítendő GPU";
 "Show GPU type" = "GPU típus mutatása";
-"GPU enabled" = "GPU bekapcsolva";
-"GPU disabled" = "GPU kikapcsolva";
-"GPU temperature" = "GPU hőmérséklet";
 "GPU utilization" = "GPU terhelés";
 "Vendor" = "Gyártó";
 "Model" = "Modell";
 "Status" = "Állapot";
 "Active" = "Aktív";
-"Non active" = "Inaktív";
-"Fan speed" = "Ventilátor sebesség";
-"Core clock" = "Mag órajel";
-"Memory clock" = "Memória órajel";
 "Utilization" = "Felhasználás";
 "Render utilization" = "Render használat";
 "Tiler utilization" = "Tiler használat";
@@ -359,7 +324,6 @@
 "Power on hours" = "Power on hours";
 
 // Sensors
-"Temperature unit" = "Hőmérséklet mértékegysége";
 "Celsius" = "Celsius";
 "Fahrenheit" = "Fahrenheit";
 "Save the fan speed" = "Ventilátor sebesség mentése";
@@ -388,11 +352,6 @@
 "Interface" = "Interfész";
 "Physical address" = "Fizikai cím";
 "Refresh" = "Frissítés";
-"Click to copy public IP address" = "Kattints a publikus IP cím másolásához";
-"Click to copy local IP address" = "Kattints a helyi IP cím másolásához";
-"Click to copy wifi name" = "Kattints a Wi-Fi nevének másolásához";
-"Click to copy mac address" = "Kattints a fizikai cím másolásához";
-"No connection" = "Nincs kapcsolat";
 "Network interface" = "Hálózati interfész kiválasztása";
 "Total download" = "Fogadott adatok";
 "Total upload" = "Küldött adatok";
@@ -404,12 +363,9 @@
 "Standard" = "Szabvány";
 "Security" = "Biztonság";
 "Channel" = "Csatorna";
-"Common scale" = "Azonos méretezés";
 "Autodetection" = "Automatikus észlelés";
 "Widget activation threshold" = "Widget aktivációs küszöbe";
 "Internet connection" = "Internet kapcsolat";
-"Active state color" = "Aktív állapot színe";
-"Nonactive state color" = "Inaktív állapot színe";
 "Connectivity host" = "Kapcsolati gazdagép";
 "Leave empty to disable the check" = "Hagyd üresen az ellenőrzés kikapcsolásához";
 "Connectivity history" = "Kapcsolati előzmények";
@@ -417,7 +373,6 @@
 "Every hour" = "Óránként";
 "Every 12 hours" = "12 óránként";
 "Every 24 hours" = "24 óránként";
-"Network activity" = "Hálózati tevékenység";
 "Last reset" = "Utolsó visszaállítás óta eltelt idő: %0";
 "Latency" = "Látencia"; // gemma4:31b
 "Upload speed" = "Feltöltés"; // translategemma:4b
@@ -465,11 +420,7 @@
 "Last charge" = "Utolsó töltés";
 "Capacity" = "Kapacitás";
 "current / maximum / designed" = "jelenlegi / maximum / gyári";
-"Low power mode" = "Energia takarékos mód";
 "Percentage inside the icon" = "Százalék megjelenítése az ikonban";
-"Colorize battery" = "Akkumlátor színezése";
-"Charging current" = "Töltési áram"; // translategemma:4b
-"Charging Voltage" = "Töltési feszültség"; // translategemma:4b
 "Charger state inside the battery" = "Töltési állapot az akkumulátoron belül"; // gemma4:31b
 
 

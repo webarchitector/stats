@@ -112,23 +112,10 @@
 "welcome_message" = "شكرًا لاستخدام الإحصاءات، أداة مراقبة نظام macOS المجانية ومفتوحة المصدر لشريط القوائم الخاص بك.";
 "Start the application automatically when starting your Mac" = "بدء تشغيل التطبيق تلقائيًا عند بدء تشغيل Mac الخاص بك";
 "Do not start the application automatically when starting your Mac" = "عدم بدء تشغيل التطبيق تلقائيًا عند بدء تشغيل Mac الخاص بك";
-"Do everything silently in the background (recommended)" = "قم بعمل كل شيء بصمت في الخلفية (موصى به)";
-"Check for a new version on startup" = "التحقق من وجود إصدار جديد عند التشغيل";
-"Check for a new version every day (once a day)" = "التحقق من وجود إصدار جديد كل يوم (مرة واحدة في اليوم)";
-"Check for a new version every week (once a week)" = "التحقق من وجود إصدار جديد كل أسبوع (مرة واحدة في الأسبوع)";
-"Check for a new version every month (once a month)" = "التحقق من وجود إصدار جديد كل شهر (مرة واحدة في الشهر)";
-"Never check for updates (not recommended)" = "عدم التحقق من وجود تحديثات (غير موصى به)";
-"Anonymous telemetry for better development decisions" = "معلومات تشخيصية مجهولة لاتخاذ قرارات تطوير أفضل";
-"Share anonymous telemetry data" = "مشاركة بيانات التشخيص المجهولة";
-"Do not share anonymous telemetry data" = "عدم مشاركة بيانات التشخيص المجهولة";
 "The configuration is completed" = "تم الانتهاء من التكوين";
 "finish_setup_message" = "كل شيء مُعدّ، الإحصاءات هي أداة مفتوحة المصدر، مجانية وستظل دائمًا كذلك. إذا كنت تستمتع بها يمكنك دعم المشروع، دائمًا محل تقدير!";
 
 // Alerts
-"New version available" = "إصدار جديد متاح";
-"Click to install the new version of Stats" = "انقر لتثبيت الإصدار الجديد من الإحصاءات";
-"Successfully updated" = "تم التحديث بنجاح";
-"Stats was updated to v" = "تم تحديث الإحصاءات إلى الإصدار v%0";
 "Reset settings text" = "سيتم إعادة ضبط جميع إعدادات التطبيق وسيتم إعادة تشغيل التطبيق. هل تريد المتابعة؟";
 "Support text" = "شكرًا لك على استخدامك ل Stats! \n\nيستغرق الحفاظ على هذا المشروع مفتوح المصدر وتحسينه وقتًا وموارد. دعمكم يساعدنا على الاستمرار في توفير تطبيق مجاني وموثوق للجميع. كل جزء صغير يساعدنا!";
 
@@ -144,14 +131,11 @@
 "Toggle the module" = "تبديل الوحدة"; // gemma4:31b
 
 // Application settings
-"Update application" = "تحديث التطبيق";
-"Check for updates" = "التحقق من وجود تحديثات";
 "At start" = "عند البدء";
 "Once per day" = "مرة يوميًا";
 "Once per week" = "مرة أسبوعيًا";
 "Once per month" = "مرة شهريًا";
 "Never" = "أبدًا";
-"Check for update" = "التحقق من وجود تحديث";
 "Show icon in dock" = "إظهار الرمز في القائمة";
 "Start at login" = "بدء التشغيل عند تسجيل الدخول";
 "Build number" = "رقم الإصدار";
@@ -163,7 +147,6 @@
 "Combined modules" = "الوحدات المجتمعة";
 "Combined details" = "تفاصيل مجمعة"; // translategemma:4b
 "Spacing" = "التباعد";
-"Share anonymous telemetry" = "مشاركة بيانات التشخيص المجهولة";
 "Choose file" = "اختيار ملف"; // gemma4:31b
 "Stress tests" = "اختبارات الإجهاد"; // gemma4:31b
 
@@ -180,12 +163,6 @@
 "Disks" = "الأقراص"; // translategemma:4b
 "Display" = "شاشة"; // gemma4:31b
 
-// Update
-"The latest version of Stats installed" = "تم تثبيت أحدث إصدار من الإحصاءات";
-"Downloading..." = "جار التحميل...";
-"Current version: " = "الإصدار الحالي:  ";
-"Latest version: " = "الإصدار الأحدث:    ";
-
 // Widgets
 "Color" = "لون";
 "Label" = "تسمية";
@@ -195,7 +172,6 @@
 "Colorize" = "تلوين";
 "Colorize value" = "تلوين القيمة";
 "Additional information" = "معلومات إضافية";
-"Reverse values order" = "عكس ترتيب القيم";
 "Base" = "قاعدة";
 "Display mode" = "وضع العرض";
 "One row" = "صف واحد";
@@ -229,8 +205,6 @@
 
 // Module Kit
 "Open module settings" = "فتح إعدادات الوحدة";
-"Select widget" = "اختيار %0 عنصر";
-"Open widget settings" = "فتح إعدادات العنصر";
 "Update interval" = "فاصل التحديث";
 "Usage history" = "سجل الاستخدام";
 "Details" = "التفاصيل";
@@ -251,7 +225,6 @@
 // Modules
 "Number of top processes" = "عدد أعلى العمليات";
 "Update interval for top processes" = "فاصل التحديث لأعلى العمليات";
-"Notification level" = "مستوى الإشعار";
 "Chart color" = "لون المخطط";
 "Main chart scaling" = "تحجيم المخطط الرئيسي";
 "Scale value" = "قيمة المقياس";
@@ -275,7 +248,6 @@
 "5 minutes" = "5 دقائق";
 "15 minutes" = "15 دقيقة";
 "CPU usage threshold" = "عتبة استخدام المعالج";
-"CPU usage is" = "استخدام المعالج %0";
 "Efficiency cores" = "نوى كفاءة";
 "Performance cores" = "نوى أداء";
 "System color" = "لون النظام";
@@ -298,18 +270,11 @@
 // GPU
 "GPU to show" = "عرض GPU";
 "Show GPU type" = "عرض نوع GPU";
-"GPU enabled" = "GPU مُمكّن";
-"GPU disabled" = "GPU معطل";
-"GPU temperature" = "حرارة GPU";
 "GPU utilization" = "استخدام GPU";
 "Vendor" = "البائع";
 "Model" = "النموذج";
 "Status" = "الحالة";
 "Active" = "نشط";
-"Non active" = "غير نشط";
-"Fan speed" = "سرعة المروحة";
-"Core clock" = "تردد النواة";
-"Memory clock" = "تردد الذاكرة";
 "Utilization" = "استخدام";
 "Render utilization" = "استخدام الرندر";
 "Tiler utilization" = "استخدام اللوح";
@@ -359,7 +324,6 @@
 "Power on hours" = "Power on hours";
 
 // Sensors
-"Temperature unit" = "وحدة الحرارة";
 "Celsius" = "درجة مئوية";
 "Fahrenheit" = "فهرنهايت";
 "Save the fan speed" = "حفظ سرعة المروحة";
@@ -388,11 +352,6 @@
 "Interface" = "واجهة";
 "Physical address" = "العنوان الفيزيائي";
 "Refresh" = "تحديث";
-"Click to copy public IP address" = "انقر لنسخ عنوان IP العام";
-"Click to copy local IP address" = "انقر لنسخ عنوان IP المحلي";
-"Click to copy wifi name" = "انقر لنسخ اسم الواي فاي";
-"Click to copy mac address" = "انقر لنسخ عنوان MAC";
-"No connection" = "لا يوجد اتصال";
 "Network interface" = "واجهة الشبكة";
 "Total download" = "إجمالي التنزيل";
 "Total upload" = "إجمالي الرفع";
@@ -404,12 +363,9 @@
 "Standard" = "قياسي";
 "Security" = "أمان";
 "Channel" = "قناة";
-"Common scale" = "مقياس شائع";
 "Autodetection" = "الكشف التلقائي";
 "Widget activation threshold" = "عتبة تنشيط الودجة";
 "Internet connection" = "اتصال بالإنترنت";
-"Active state color" = "لون الحالة النشطة";
-"Nonactive state color" = "لون الحالة غير النشطة";
 "Connectivity host" = "مضيف الاتصال";
 "Leave empty to disable the check" = "اتركه فارغًا لتعطيل الفحص";
 "Connectivity history" = "سجل الاتصال";
@@ -417,7 +373,6 @@
 "Every hour" = "كل ساعة";
 "Every 12 hours" = "كل 12 ساعة";
 "Every 24 hours" = "كل 24 ساعة";
-"Network activity" = "نشاط الشبكة";
 "Last reset" = "آخر إعادة تعيين منذ %0";
 "Latency" = "تأخير";
 "Upload speed" = "رفع"; // gemma4:31b
@@ -465,11 +420,7 @@
 "Last charge" = "آخر شحن";
 "Capacity" = "السعة";
 "current / maximum / designed" = "الحالي / الأقصى / المصمم";
-"Low power mode" = "وضع الطاقة المنخفضة";
 "Percentage inside the icon" = "النسبة المئوية داخل الرمز";
-"Colorize battery" = "تلوين البطارية";
-"Charging current" = "تيار الشحن"; // translategemma:4b
-"Charging Voltage" = "جهد الشحن"; // translategemma:4b
 "Charger state inside the battery" = "حالة الشحن داخل البطارية"; // gemma4:31b
 
 

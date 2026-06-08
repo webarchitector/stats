@@ -112,6 +112,10 @@ func main() {
         
         if let index = args.firstIndex(where: { $0 == "-m" }), args.indices.contains(index+1),
            let raw = Int(args[index+1]), let mode = FanMode.init(rawValue: raw) {
+            if mode.isStatsControlled {
+                print("[ERROR]: mode \(raw) is Stats-internal (curve) and cannot be written to SMC")
+                return
+            }
             SMC.shared.setFanMode(id, mode: mode)
             help = false
         }

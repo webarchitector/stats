@@ -715,4 +715,45 @@ final class SensorsTests: XCTestCase {
         XCTAssertEqual(fake.speedCalls.count, 2)
         clearProfileStore()
     }
+
+    // MARK: - Controller per-fan offset
+
+    func testController_twoFans_appliesOffsetToFan1() {
+        clearProfileStore()
+        let p = FanProfile(name: "Off",
+            drivers: [DriverSensor(key: "TC0D")],
+            points: [CurvePoint(tempC: 30, rpm: 1000), CurvePoint(tempC: 80, rpm: 6000)],
+            fanOffsetRPM: 100, hysteresisC: 0.1, deltaRpmThreshold: 1)
+        let store = enabledStoreWithCustomProfile(p)
+        let fake = FakeFanCurveHelper()
+        let c = FanCurveController(helper: fake, store: store)
+        // temp=55 → base=3500. Fan 0 → 3500, Fan 1 → 3600.
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0), makeControllerFan(id: 1)],
+            temps: [("TC0D", 55)]))
+        let fan0Rpm = fake.speedCalls.first { $0.id == 0 }?.rpm
+        let fan1Rpm = fake.speedCalls.first { $0.id == 1 }?.rpm
+        XCTAssertEqual(fan0Rpm, 3500)
+        XCTAssertEqual(fan1Rpm, 3600)
+        clearProfileStore()
+    }
+
+    func testController_offsetClampedToMaxSpeed() {
+        clearProfileStore()
+        let p = FanProfile(name: "Off",
+            drivers: [DriverSensor(key: "TC0D")],
+            points: [CurvePoint(tempC: 30, rpm: 1000), CurvePoint(tempC: 80, rpm: 6000)],
+            fanOffsetRPM: 500, hysteresisC: 0.1, deltaRpmThreshold: 1)
+        let store = enabledStoreWithCustomProfile(p)
+        let fake = FakeFanCurveHelper()
+        let c = FanCurveController(helper: fake, store: store)
+        // Fan 1 maxSpeed = 5800; base at 75 = 5500; +500 offset = 6000 → clamped to 5800
+        let fan0 = makeControllerFan(id: 0, max: 7000)
+        let fan1 = makeControllerFan(id: 1, max: 5800)
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [fan0, fan1], temps: [("TC0D", 75)]))
+        let fan1Rpm = fake.speedCalls.first { $0.id == 1 }?.rpm
+        XCTAssertEqual(fan1Rpm, 5800)
+        clearProfileStore()
+    }
 }

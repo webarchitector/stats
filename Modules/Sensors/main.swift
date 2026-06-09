@@ -147,7 +147,11 @@ public class Sensors: Module {
     /// `internal` (not `private`) so tests using `@testable import Sensors` can call it.
     internal static func resetStaleCurveModes(helper: FanCurveHelper, store: ProfileStore) {
         guard helper.isActive() else { return }
-        for id in 0...3 {
+        // Scan the real fan count, but never fewer ids than the legacy 0...3
+        // floor (in case the FNum read fails) — iterating an absent fan id is
+        // a cheap no-op since the `exist` guard below skips it.
+        let fanCount = Int(SMC.shared.getValue("FNum") ?? 0)
+        for id in 0..<max(fanCount, 4) {
             let key = "fan_\(id)_mode"
             guard Store.shared.exist(key: key) else { continue }
             let raw = Store.shared.int(key: key, defaultValue: 0)

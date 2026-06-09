@@ -20,6 +20,7 @@ internal class Popup: PopupWrapper {
     
     private var sensors: [Sensor_p] = []
     private let settingsView: NSStackView = NSStackView()
+    private var sensorSettingsBuilt: Bool = false
     private let sensorsCache = PopupCache<[Sensor_p]>()
 
     public init() {
@@ -68,10 +69,12 @@ internal class Popup: PopupWrapper {
         }
         
         self.subviews.forEach({ $0.removeFromSuperview() })
-        if !reload {
+        let rebuildSettings = !reload && self.sensorSettingsBuilt
+        if rebuildSettings {
             self.settingsView.subviews.filter({ $0.identifier == NSUserInterfaceItemIdentifier("sensor") }).forEach { v in
                 v.removeFromSuperview()
             }
+            self.sensorSettingsBuilt = false
         }
         
         if !fans.isEmpty {
@@ -123,23 +126,7 @@ internal class Popup: PopupWrapper {
                     groups.append(s.group)
                 }
             }
-            
-            if !reload {
-                let section = PreferencesSection(title: localizedString(typ.rawValue))
-                section.identifier = NSUserInterfaceItemIdentifier("sensor")
-                groups.forEach { (group: SensorGroup) in
-                    filtered.filter{ $0.group == group }.forEach { (s: Sensor_p) in
-                        let btn = switchView(
-                            action: #selector(self.toggleSensor),
-                            state: s.popupState
-                        )
-                        btn.identifier = NSUserInterfaceItemIdentifier(rawValue: s.key)
-                        section.add(PreferencesRow(localizedString(s.name), component: btn))
-                    }
-                }
-                self.settingsView.addArrangedSubview(section)
-            }
-            
+
             if typ == .fan { return }
             filtered = filtered.filter{ $0.popupState }
             if filtered.isEmpty { return }
@@ -158,6 +145,9 @@ internal class Popup: PopupWrapper {
         
         if !reload {
             self.sensors = values
+        }
+        if rebuildSettings {
+            self.buildSensorSettingsSections()
         }
         self.recalculateHeight()
     }
@@ -202,9 +192,53 @@ internal class Popup: PopupWrapper {
     }
     
     // MARK: - Settings
-    
+
     public override func settings() -> NSView? {
-        self.settingsView
+        if !self.sensorSettingsBuilt {
+            self.buildSensorSettingsSections()
+        }
+        return self.settingsView
+    }
+
+    private func buildSensorSettingsSections() {
+        let values = self.sensors
+        var sensors = values
+        if !self.unknownSensorsState {
+            sensors = sensors.filter({ $0.group != .unknown })
+        }
+        var types: [SensorType] = []
+        sensors.forEach { (s: Sensor_p) in
+            if !types.contains(s.type) {
+                types.append(s.type)
+            }
+        }
+        types.forEach { (typ: SensorType) in
+            let filtered = sensors.filter{ $0.type == typ }
+            var groups: [SensorGroup] = []
+            filtered.forEach { (s: Sensor_p) in
+                if !groups.contains(s.group) {
+                    groups.append(s.group)
+                }
+            }
+            self.appendSensorSettingsSection(typ: typ, filtered: filtered, groups: groups)
+        }
+        self.sensorSettingsBuilt = true
+    }
+
+    private func appendSensorSettingsSection(typ: SensorType, filtered: [Sensor_p], groups: [SensorGroup]) {
+        let section = PreferencesSection(title: localizedString(typ.rawValue))
+        section.identifier = NSUserInterfaceItemIdentifier("sensor")
+        groups.forEach { (group: SensorGroup) in
+            filtered.filter{ $0.group == group }.forEach { (s: Sensor_p) in
+                let btn = switchView(
+                    action: #selector(self.toggleSensor),
+                    state: s.popupState
+                )
+                btn.identifier = NSUserInterfaceItemIdentifier(rawValue: s.key)
+                section.add(PreferencesRow(localizedString(s.name), component: btn))
+            }
+        }
+        self.settingsView.addArrangedSubview(section)
     }
     
     @objc private func toggleFanValue(_ sender: NSMenuItem) {

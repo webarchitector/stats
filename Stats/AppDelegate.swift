@@ -255,24 +255,25 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         let peers = NSWorkspace.shared.runningApplications.filter {
             $0.bundleIdentifier == myBundle && $0.processIdentifier != myPID
         }
-        var shouldExitSelf = false
-        for peer in peers {
-            // If a peer launched after us, it's the user's intent — defer to it.
-            // Otherwise force-quit the older peer; user wants the newest binary.
-            // Tie-break (identical launchDate, sub-millisecond race): lower PID
-            // wins so both processes deterministically agree on who survives.
-            if let peerLaunch = peer.launchDate,
-               let myLaunch = me.launchDate {
-                if peerLaunch > myLaunch {
-                    shouldExitSelf = true
-                } else if peerLaunch == myLaunch && peer.processIdentifier < myPID {
-                    shouldExitSelf = true
-                } else {
-                    peer.forceTerminate()
-                }
-            } else {
-                peer.forceTerminate()
+        // "Newest wins": defer to any peer that out-ranks us. Rank by
+        // launchDate, tie-broken by PID (lower wins) so both processes agree
+        // deterministically on who survives. A missing launchDate (e.g. run
+        // from a terminal / Xcode rather than via LaunchServices) falls back to
+        // the PID tie-break rather than blanket-killing every peer.
+        func peerOutranksMe(_ peer: NSRunningApplication) -> Bool {
+            if let peerLaunch = peer.launchDate, let myLaunch = me.launchDate,
+               peerLaunch != myLaunch {
+                return peerLaunch > myLaunch
             }
+            return peer.processIdentifier < myPID
+        }
+
+        let shouldExitSelf = peers.contains(where: peerOutranksMe)
+        // Only evict the older peers once we know WE are the survivor —
+        // terminating eagerly inside the decision loop would let a process
+        // that is itself about to exit kill peers it should have deferred to.
+        if !shouldExitSelf {
+            peers.forEach { $0.forceTerminate() }
         }
         return shouldExitSelf
     }

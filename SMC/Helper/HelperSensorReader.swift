@@ -97,6 +97,10 @@ public final class HelperSensorReader {
         var remaining = Set(driverKeys)
 
         for key in driverKeys {
+            // `SMC.getValue` precondition-fails on non-4-char keys (smc.swift
+            // line 120). Synthetic driver keys like "Hottest CPU" / "Average
+            // GPU" must skip SMC and fall through to the HID block below.
+            guard key.count == 4 else { continue }
             if let v = self.smc.getValue(key), v > 0, v < 110 {
                 sensors.append(HelperSensor(key: key, name: key, value: v, type: .temperature))
                 remaining.remove(key)

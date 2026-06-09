@@ -17,6 +17,14 @@ import CoreWLAN
 // swiftlint:disable control_statement
 extension CWPHYMode: @retroactive CustomStringConvertible {
     public var description: String {
+        // `.mode11be` (Wi-Fi 7) was introduced in macOS 15 — older SDKs
+        // (e.g. GitHub Actions `macos-latest` when it lags Apple) don't
+        // expose the symbol at all, so referencing `.mode11be` by name
+        // breaks compilation. Detect by rawValue (kCWPHYMode11be = 7 per
+        // CoreWLANTypes.h) first; older SDKs without the case will hit
+        // `@unknown default` at runtime (no live Wi-Fi 7 hardware on them
+        // anyway).
+        if self.rawValue == 7 { return "802.11be" }
         switch(self) {
         case .mode11a:  return "802.11a"
         case .mode11ac: return "802.11ac"
@@ -24,7 +32,6 @@ extension CWPHYMode: @retroactive CustomStringConvertible {
         case .mode11g:  return "802.11g"
         case .mode11n:  return "802.11n"
         case .mode11ax: return "802.11ax"
-        case .mode11be: return "802.11be"
         case .modeNone: return "none"
         @unknown default: return "unknown"
         }

@@ -29,6 +29,7 @@ jobs:
       # overrides, Xcode tries to resolve provisioning for the pinned team
       # and `xcodebuild build` exits 65 even with CODE_SIGNING_ALLOWED=NO.
       - name: Build
+        shell: bash {0}  # no -e: we MUST run our diagnostic block on failure
         run: |
           set -o pipefail
           xcodebuild -scheme Stats -configuration Debug \
@@ -41,20 +42,19 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             ONLY_ACTIVE_ARCH=YES \
             build 2>&1 | tee /tmp/xcb-build.log
-          rc=$?
+          rc=${PIPESTATUS[0]}
           if [ "$rc" != "0" ]; then
-            echo "::group::Last 200 lines of build log"
-            tail -200 /tmp/xcb-build.log
+            echo "::group::Last 400 lines of build log"
+            tail -400 /tmp/xcb-build.log
             echo "::endgroup::"
-            # surface every error as a GH annotation so we can read it via
-            # the public check-runs annotations API (no auth required).
-            grep -E "error:|FAILED|fatal" /tmp/xcb-build.log | head -50 | while read -r line; do
-              # escape % \n \r per GH workflow command spec
-              esc=$(printf '%s' "$line" | sed 's/%/%25/g; s/\r/%0D/g; s/\n/%0A/g')
+            # Surface every error as a GH annotation — readable via public
+            # check-runs annotations API (no auth required).
+            grep -E "error:|FAILED|fatal|Code Sign" /tmp/xcb-build.log | head -50 | while read -r line; do
+              esc=$(printf '%s' "$line" | sed 's/%/%25/g; s/\r/%0D/g')
               echo "::error::xcb: $esc"
             done
-            exit $rc
           fi
+          exit $rc
 
       - name: Test
         run: |

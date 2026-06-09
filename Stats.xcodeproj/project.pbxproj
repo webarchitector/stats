@@ -9,9 +9,11 @@
 /* Begin PBXBuildFile section */
 		08369155BB0B08ED5609D3DF /* Battery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BAEBDAEB501774050AE4CC8 /* Battery.swift */; };
 		0DA10A270E0F90AFFAAE160E /* Tachometer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35AFE2803BD64EACA8FC4108 /* Tachometer.swift */; };
+		25B4E441C77FB2CEF460CC6F /* FanSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = A86D42398106E8F1C39B9671 /* FanSnapshot.swift */; };
 		2EA5A221E5B4339C874D8A72 /* curveGraph.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2E0CF1B7DCD5E022571C876 /* curveGraph.swift */; };
 		421C47D22F2AD502B353402F /* Sensors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58091506F3B289B231B39FE3 /* Sensors.swift */; };
 		479B2E3E389D636431E0E9C5 /* profileStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3322981FB4165F78DFD82B5 /* profileStore.swift */; };
+		5516AB03BA1659400C1FA207 /* Types.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21C37A02904455D7F1D83D7F /* Types.swift */; };
 		5C044F7A2B3DE6F3005F6951 /* portal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C044F792B3DE6F3005F6951 /* portal.swift */; };
 		5C0A2A8A292A5B4D009B4C1F /* SMJobBlessUtil.py in Resources */ = {isa = PBXBuildFile; fileRef = 5C0A2A89292A5B4D009B4C1F /* SMJobBlessUtil.py */; };
 		5C0A9CA22C467AA300EE6A89 /* widget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C0A9CA12C467AA300EE6A89 /* widget.swift */; };
@@ -61,10 +63,14 @@
 		5CFE493D2926513E000F2856 /* eu.exelban.Stats.SMC.Helper in Copy Files */ = {isa = PBXBuildFile; fileRef = 5CFE492729264DF1000F2856 /* eu.exelban.Stats.SMC.Helper */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		5CFE494229265418000F2856 /* uninstall.sh in Resources */ = {isa = PBXBuildFile; fileRef = 5CFE494129265418000F2856 /* uninstall.sh */; };
 		5CFE494429265421000F2856 /* changelog.py in Resources */ = {isa = PBXBuildFile; fileRef = 5CFE494329265421000F2856 /* changelog.py */; };
+		5D2BBA9ECFAB1F695C9C0CEB /* Sensor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3D59E2F2D189F00156F3877 /* Sensor.swift */; };
 		5EE8037F29C36BDD0063D37D /* portal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EE8037E29C36BDD0063D37D /* portal.swift */; };
 		615D3D58050960FF570FEC80 /* LineChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B0653237E4E1A476F89E190 /* LineChart.swift */; };
 		64073D28B9A426470A21EBF2 /* NetworkChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 178F39B1E44EC323AB65D30A /* NetworkChart.swift */; };
+		67490ED3F94D87DCE74E4C87 /* FanProfileBuiltins.swift in Sources */ = {isa = PBXBuildFile; fileRef = C08E9EA01827C2A7631D3A84 /* FanProfileBuiltins.swift */; };
 		675CB861836703C56125B88E /* Memory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FED240580B33FFEF0F19096 /* Memory.swift */; };
+		76CD44A9FBE572399A81D1EB /* TakeoverStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A4A3830172034E83028A1DF /* TakeoverStore.swift */; };
+		97AAC06C9D97A0F712F79DD7 /* FanCoreClock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 651D920E612C9B81D8586E18 /* FanCoreClock.swift */; };
 		9A045EB72594F8D100ED58F2 /* Dashboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A045EB62594F8D100ED58F2 /* Dashboard.swift */; };
 		9A2846FE2666A9CC00EC1F6D /* Kit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A2846F72666A9CC00EC1F6D /* Kit.framework */; };
 		9A2846FF2666A9CC00EC1F6D /* Kit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9A2846F72666A9CC00EC1F6D /* Kit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -165,12 +171,17 @@
 		A4F5347947AD4C4D6021A568 /* Stack.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3AAC1FE992EE74A4AE15281 /* Stack.swift */; };
 		AA00000000000000000000A1 /* libIOReport.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C1E45552D11D66200525864 /* libIOReport.tbd */; };
 		B85DB7409048525C8583C63B /* fanCurve.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5953BDA1E924935D3DB7E8B7 /* fanCurve.swift */; };
+		C11BA53C546C20D2CF12A2C2 /* EngineSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 619C200D4214A6C5029445FC /* EngineSnapshot.swift */; };
 		C3C4825ACB5AD71642FC4540 /* Speed.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72F9B77740E58172E5CB2DC9 /* Speed.swift */; };
 		D616FB5CDDF9B069C77C5D4A /* fanController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABF31774E50A0093CC9A7000 /* fanController.swift */; };
 		D868DBE59E53CB1FEE81607A /* Mini.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9E78DB64673E0C9EEC4D027 /* Mini.swift */; };
+		D89B7CECBEAFE6E16485B0E3 /* FanCurveHelperProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19B9C2E6ADF95B22763070DD /* FanCurveHelperProtocol.swift */; };
 		DD276DEE7B3C19F7C3F799CC /* Dot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 154E33E4A9DF7ABB01837C03 /* Dot.swift */; };
 		DD3B2242034ABE0225B621C4 /* Label.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61E7D6A186866A374F12E393 /* Label.swift */; };
+		DE8037D178FF788853CA08FC /* FanCurveEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFDACA5A12A05068589823D3 /* FanCurveEngine.swift */; };
 		F2579730D4AF7ACDB07D2693 /* Text.swift in Sources */ = {isa = PBXBuildFile; fileRef = C18AD19DEB2B117AA3A32D8F /* Text.swift */; };
+		F3DDE0AD6D52AFC2257DB082 /* FanCurve.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C1447BB1CF0E7B3E88CEF39 /* FanCurve.swift */; };
+		F7DA5C96B478B10D4729C17B /* FanCoreLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23194EAF6413D7BCAEFE3DC5 /* FanCoreLogger.swift */; };
 		FCC6289F9FBA760C123F6589 /* PieChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF6E641C66683469A3CAED4C /* PieChart.swift */; };
 /* End PBXBuildFile section */
 
@@ -392,14 +403,19 @@
 		13BE56042D0E6963001C58EC /* en-AU */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "en-AU"; path = "en-AU.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		154E33E4A9DF7ABB01837C03 /* Dot.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Dot.swift; sourceTree = "<group>"; };
 		178F39B1E44EC323AB65D30A /* NetworkChart.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NetworkChart.swift; sourceTree = "<group>"; };
+		19B9C2E6ADF95B22763070DD /* FanCurveHelperProtocol.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FanCurveHelperProtocol.swift; path = FanCurveHelperProtocol.swift; sourceTree = "<group>"; };
+		21C37A02904455D7F1D83D7F /* Types.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = Types.swift; path = Types.swift; sourceTree = "<group>"; };
+		23194EAF6413D7BCAEFE3DC5 /* FanCoreLogger.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FanCoreLogger.swift; path = FanCoreLogger.swift; sourceTree = "<group>"; };
 		2658929724FC0F3B00FB3B6A /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		29AA17CA2926879000709C01 /* fa */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = fa; path = fa.lproj/Localizable.strings; sourceTree = "<group>"; };
 		2FED240580B33FFEF0F19096 /* Memory.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Memory.swift; sourceTree = "<group>"; };
 		30370F8F253DCBC0006404D8 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		35AFE2803BD64EACA8FC4108 /* Tachometer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Tachometer.swift; sourceTree = "<group>"; };
+		3A4A3830172034E83028A1DF /* TakeoverStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TakeoverStore.swift; path = TakeoverStore.swift; sourceTree = "<group>"; };
 		40BE2B202745D63800AE9396 /* da */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = da; path = da.lproj/Localizable.strings; sourceTree = "<group>"; };
 		47665544298DC92F00F7B709 /* sk */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = sk; path = sk.lproj/Localizable.strings; sourceTree = "<group>"; };
 		4921436D25319699000A1C47 /* ko */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ko; path = ko.lproj/Localizable.strings; sourceTree = "<group>"; };
+		4C1447BB1CF0E7B3E88CEF39 /* FanCurve.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FanCurve.swift; path = FanCurve.swift; sourceTree = "<group>"; };
 		4F92E6432D0F293100EA593F /* fi */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = fi; path = fi.lproj/Localizable.strings; sourceTree = "<group>"; };
 		58091506F3B289B231B39FE3 /* Sensors.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Sensors.swift; sourceTree = "<group>"; };
 		5953BDA1E924935D3DB7E8B7 /* fanCurve.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = fanCurve.swift; path = Modules/Sensors/fanCurve.swift; sourceTree = SOURCE_ROOT; };
@@ -457,9 +473,11 @@
 		5CFE494129265418000F2856 /* uninstall.sh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.sh; path = uninstall.sh; sourceTree = "<group>"; };
 		5CFE494329265421000F2856 /* changelog.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = changelog.py; sourceTree = "<group>"; };
 		5EE8037E29C36BDD0063D37D /* portal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = portal.swift; sourceTree = "<group>"; };
+		619C200D4214A6C5029445FC /* EngineSnapshot.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = EngineSnapshot.swift; path = EngineSnapshot.swift; sourceTree = "<group>"; };
 		61E7D6A186866A374F12E393 /* Label.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Label.swift; sourceTree = "<group>"; };
 		62BA5F74254810C8009D0AC2 /* es */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = es; path = es.lproj/Localizable.strings; sourceTree = "<group>"; };
 		63A07F97275018DF00352C46 /* ca */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ca; path = ca.lproj/Localizable.strings; sourceTree = "<group>"; };
+		651D920E612C9B81D8586E18 /* FanCoreClock.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FanCoreClock.swift; path = FanCoreClock.swift; sourceTree = "<group>"; };
 		6BAEBDAEB501774050AE4CC8 /* Battery.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Battery.swift; sourceTree = "<group>"; };
 		72F9B77740E58172E5CB2DC9 /* Speed.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Speed.swift; sourceTree = "<group>"; };
 		7A19DAE52552C326001B192F /* fr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = fr; path = fr.lproj/Localizable.strings; sourceTree = "<group>"; };
@@ -577,10 +595,13 @@
 		9AF9EE192464A7B3005D2270 /* config.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = config.plist; sourceTree = "<group>"; };
 		9B0653237E4E1A476F89E190 /* LineChart.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LineChart.swift; sourceTree = "<group>"; };
 		9DE8F91C37CE003CC79E988C /* BarChart.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BarChart.swift; sourceTree = "<group>"; };
+		A86D42398106E8F1C39B9671 /* FanSnapshot.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FanSnapshot.swift; path = FanSnapshot.swift; sourceTree = "<group>"; };
 		ABF31774E50A0093CC9A7000 /* fanController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = fanController.swift; path = Modules/Sensors/fanController.swift; sourceTree = SOURCE_ROOT; };
 		B2E0CF1B7DCD5E022571C876 /* curveGraph.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = curveGraph.swift; path = Modules/Sensors/curveGraph.swift; sourceTree = SOURCE_ROOT; };
 		B8F0D4F1259D19B100AAFAAF /* pt-PT */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "pt-PT"; path = "pt-PT.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		BB9E59E725BB5F5E004AED95 /* hu */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = hu; path = hu.lproj/Localizable.strings; sourceTree = "<group>"; };
+		BFDACA5A12A05068589823D3 /* FanCurveEngine.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FanCurveEngine.swift; path = FanCurveEngine.swift; sourceTree = "<group>"; };
+		C08E9EA01827C2A7631D3A84 /* FanProfileBuiltins.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FanProfileBuiltins.swift; path = FanProfileBuiltins.swift; sourceTree = "<group>"; };
 		C18AD19DEB2B117AA3A32D8F /* Text.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Text.swift; sourceTree = "<group>"; };
 		C3AAC1FE992EE74A4AE15281 /* Stack.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Stack.swift; sourceTree = "<group>"; };
 		C904AECF255939DB004A9EBC /* it */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = it; path = it.lproj/Localizable.strings; sourceTree = "<group>"; };
@@ -588,6 +609,7 @@
 		CE47845D298F55F900F564FD /* th */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = th; path = th.lproj/Localizable.strings; sourceTree = "<group>"; };
 		E3322981FB4165F78DFD82B5 /* profileStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = profileStore.swift; path = Modules/Sensors/profileStore.swift; sourceTree = SOURCE_ROOT; };
 		E9E78DB64673E0C9EEC4D027 /* Mini.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Mini.swift; sourceTree = "<group>"; };
+		F3D59E2F2D189F00156F3877 /* Sensor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = Sensor.swift; path = Sensor.swift; sourceTree = "<group>"; };
 		F8A38F83253303A8006D4D81 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/Localizable.strings; sourceTree = "<group>"; };
 		FCBD9253255C7D9900E1621A /* pt-BR */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "pt-BR"; path = "pt-BR.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		FF6E641C66683469A3CAED4C /* PieChart.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PieChart.swift; sourceTree = "<group>"; };
@@ -751,6 +773,7 @@
 				9AAC5E2B280ACC120043D892 /* Tests */,
 				9A1410F6229E721100D29793 /* Products */,
 				9A998CD622A199920087ADE7 /* Frameworks */,
+				BC3DC8DC92BF8E0994DEAB49 /* FanCore */,
 			);
 			sourceTree = "<group>";
 		};
@@ -1077,6 +1100,25 @@
 				5C2229BB29CF66B100F00E69 /* header.h */,
 			);
 			path = Disk;
+			sourceTree = "<group>";
+		};
+		BC3DC8DC92BF8E0994DEAB49 /* FanCore */ = {
+			isa = PBXGroup;
+			children = (
+				21C37A02904455D7F1D83D7F /* Types.swift */,
+				F3D59E2F2D189F00156F3877 /* Sensor.swift */,
+				A86D42398106E8F1C39B9671 /* FanSnapshot.swift */,
+				619C200D4214A6C5029445FC /* EngineSnapshot.swift */,
+				4C1447BB1CF0E7B3E88CEF39 /* FanCurve.swift */,
+				C08E9EA01827C2A7631D3A84 /* FanProfileBuiltins.swift */,
+				23194EAF6413D7BCAEFE3DC5 /* FanCoreLogger.swift */,
+				651D920E612C9B81D8586E18 /* FanCoreClock.swift */,
+				3A4A3830172034E83028A1DF /* TakeoverStore.swift */,
+				19B9C2E6ADF95B22763070DD /* FanCurveHelperProtocol.swift */,
+				BFDACA5A12A05068589823D3 /* FanCurveEngine.swift */,
+			);
+			name = FanCore;
+			path = FanCore;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -1887,6 +1929,17 @@
 				479B2E3E389D636431E0E9C5 /* profileStore.swift in Sources */,
 				D616FB5CDDF9B069C77C5D4A /* fanController.swift in Sources */,
 				2EA5A221E5B4339C874D8A72 /* curveGraph.swift in Sources */,
+				5516AB03BA1659400C1FA207 /* Types.swift in Sources */,
+				5D2BBA9ECFAB1F695C9C0CEB /* Sensor.swift in Sources */,
+				25B4E441C77FB2CEF460CC6F /* FanSnapshot.swift in Sources */,
+				C11BA53C546C20D2CF12A2C2 /* EngineSnapshot.swift in Sources */,
+				F3DDE0AD6D52AFC2257DB082 /* FanCurve.swift in Sources */,
+				67490ED3F94D87DCE74E4C87 /* FanProfileBuiltins.swift in Sources */,
+				F7DA5C96B478B10D4729C17B /* FanCoreLogger.swift in Sources */,
+				97AAC06C9D97A0F712F79DD7 /* FanCoreClock.swift in Sources */,
+				76CD44A9FBE572399A81D1EB /* TakeoverStore.swift in Sources */,
+				D89B7CECBEAFE6E16485B0E3 /* FanCurveHelperProtocol.swift in Sources */,
+				DE8037D178FF788853CA08FC /* FanCurveEngine.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

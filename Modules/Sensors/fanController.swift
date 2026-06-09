@@ -4,182 +4,107 @@
 //
 //  Created on 08/06/2026.
 //
+//  Thin adapter around `FanCurveEngine` (FanCore). This file is responsible
+//  for the AppKit / Kit.Store / NotificationCenter plumbing that the engine
+//  is intentionally free of, so the same engine can power the in-app
+//  controller and the privileged daemon (Phase 2+).
+//
 
 import Foundation
 import AppKit
 import Kit
 
-/// Narrow protocol for what FanCurveController needs from SMCHelper.
-/// Lets tests inject a fake.
-public protocol FanCurveHelper: AnyObject {
-    func isActive() -> Bool
-    func setFanMode(id: Int, mode: Int)
-    func setFanSpeed(id: Int, value: Int)
-}
+// MARK: - Back-compat aliases
+//
+// The clock protocol + impls moved to FanCore (renamed `FanCoreClock` /
+// `SystemFanCoreClock` / `FakeFanCoreClock`). Tests and existing call sites
+// reference the old names — keep typealiases in the Sensors namespace.
 
+public typealias FanControllerClock = FanCoreClock
+public typealias SystemFanControllerClock = SystemFanCoreClock
 #if DEBUG
-public final class FakeFanCurveHelper: FanCurveHelper {
-    public struct ModeCall: Equatable { public let id: Int; public let mode: Int }
-    public struct SpeedCall: Equatable { public let id: Int; public let rpm: Int }
-
-    public var isActiveValue: Bool = true
-    public private(set) var modeCalls: [ModeCall] = []
-    public private(set) var speedCalls: [SpeedCall] = []
-
-    public init() {}
-    public func isActive() -> Bool { isActiveValue }
-    public func setFanMode(id: Int, mode: Int) { modeCalls.append(.init(id: id, mode: mode)) }
-    public func setFanSpeed(id: Int, value: Int) { speedCalls.append(.init(id: id, rpm: value)) }
-    public func reset() { modeCalls.removeAll(); speedCalls.removeAll() }
-}
+public typealias FakeFanControllerClock = FakeFanCoreClock
 #endif
 
-/// Injected clock so time-windowed controller behaviors (sample-window pruning,
-/// derivative computation, battery-hot dwell timer) are deterministic in tests.
-public protocol FanControllerClock: AnyObject { func now() -> Date }
+// MARK: - Store-backed TakeoverStore adapter
 
-public final class SystemFanControllerClock: FanControllerClock {
-    public init() {}
-    public func now() -> Date { Date() }
+/// `TakeoverStore` implementation that reads/writes per-fan custom-mode state
+/// to `Kit.Store.shared` under `fan_<id>_mode`. Used by the in-app controller;
+/// the daemon will provide its own implementation in Phase 3.
+fileprivate final class StoreBackedTakeover: TakeoverStore {
+    func userTookOver(fan: Int) -> Bool {
+        let raw = Store.shared.int(key: "fan_\(fan)_mode", defaultValue: -1)
+        return raw == FanMode.forced.rawValue
+    }
+    func setStatsManaged(fan: Int) {
+        Store.shared.set(key: "fan_\(fan)_mode", value: FanMode.curve.rawValue)
+    }
+    func setReleased(fan: Int) {
+        Store.shared.set(key: "fan_\(fan)_mode", value: FanMode.automatic.rawValue)
+    }
 }
 
-#if DEBUG
-public final class FakeFanControllerClock: FanControllerClock {
-    public var current: Date
-    public init(_ current: Date = Date(timeIntervalSince1970: 1_000_000)) { self.current = current }
-    public func now() -> Date { current }
-    public func advance(by seconds: TimeInterval) { current = current.addingTimeInterval(seconds) }
+// MARK: - Kit.info logger adapter
+
+fileprivate struct KitInfoLogger: FanCoreLogger {
+    func info(_ message: String) {
+        // Forwards to Kit's `info()` global; the engine's logging is sparse
+        // (only the Apple-override quarantine event) so the perf cost is nil.
+        Kit.info(message)
+    }
 }
-#endif
+
+// MARK: - FanCurveController (adapter)
 
 public final class FanCurveController {
-    private let helper: FanCurveHelper
+    private let engine: FanCurveEngine
     private let store: ProfileStore
-    private let clock: FanControllerClock
-    private var managedFans: Set<Int> = []
-    private var lastApplied: [Int: Int] = [:]
-    private var lastTempForHyst: [Int: Double] = [:]
-    private var isAsleep: Bool = false
+    private let helper: FanCurveHelper
     private var didBootstrap: Bool = false
     private var observers: [(NotificationCenter, NSObjectProtocol)] = []
 
-    /// Recent (timestamp, effective-temp) samples — used both for median
-    /// smoothing of the current reading and for the rising-temp derivative
-    /// pre-ramp bonus. Anything older than `sampleWindowSeconds` is pruned
-    /// each tick. Reset on profile change / sleep / wake / relinquish so a
-    /// stale sample can never bias a fresh session's first decision.
-    private var tempSamples: [(ts: Date, temp: Double)] = []
-    private static let sampleWindowSeconds: TimeInterval = 5.0
-    private static let derivativeWindowSeconds: TimeInterval = 2.0
-    private static let derivativeThresholdCPerSec: Double = 2.0
-    private static let derivativeBonusRPM: Int = 500
-
-    /// First clock instant at which a battery sensor exceeded
-    /// `batterySafetyTempC`. nil while battery is cool, or after a drop below
-    /// threshold clears it. Once dwell ≥ `batterySafetyDelaySeconds`, the
-    /// per-fan target is forced to at least `batterySafetyFloorRPM`.
-    private var batteryHotSince: Date? = nil
-    private static let batterySafetyTempC: Double = 40.0
-    private static let batterySafetyDelaySeconds: TimeInterval = 30.0
-    private static let batterySafetyFloorRPM: Int = 2500
-    // Sensor KEYS (not display names) that report battery temperature.
-    // Source: Modules/Sensors/values.swift sensor list. Intel: TB0T/TB1T/TB2T;
-    // Apple Silicon HID exposes "gas gauge battery". Display-name strings like
-    // "Battery 1"/"Battery 2" are NOT keys — would never match a snapshot.
-    private static let batteryKeys: Set<String> = [
-        "TB0T", "TB1T", "TB2T", "gas gauge battery"
-    ]
-
-    /// Apple-firmware override failsafe state. After we issue setFanMode(.forced)
-    /// for fan id X, `lastSetMode[X] = .forced`. On the next tick we compare
-    /// against `fan.smcMode` (per-tick SMC refresh in readers.swift). If
-    /// firmware (or another process) silently reverted us to `.automatic`,
-    /// `overrideStreak[X]` increments; at 3 consecutive mismatches we add X
-    /// to `appleOverridden` and stop writing SMC for it for the rest of the
-    /// session. Cleared on `.fanProfileChanged` (user picker action) and reset
-    /// across app restarts (in-memory only — Store.activeProfile stays put so
-    /// the picker still shows the user's selection).
-    private var appleOverridden: Set<Int> = []
-    private var lastSetMode: [Int: FanMode] = [:]
-    private var overrideStreak: [Int: Int] = [:]
-    private static let appleOverrideThreshold: Int = 3
-
-    /// All mutable state above is guarded by this lock. tick() runs on the
-    /// SensorsReader's background queue; sleep/wake/profile-change observers
-    /// run on .main. Swift Dictionary is not thread-safe — concurrent read/write
-    /// can crash or corrupt without this lock.
-    private let stateLock = NSLock()
-
     /// Last snapshot processed by tick(). Cached so the `.fanProfileChanged`
-    /// observer can synchronously re-tick on user picker action instead of
-    /// waiting up to ~1s for the next reader tick — eliminates the perceived
-    /// lag between selecting a profile and SMC actually receiving the new
-    /// curve. nil until the first non-sleeping, non-nil tick.
+    /// observer can pass the engine the most recent inputs for a synchronous
+    /// re-tick. Engine itself ALSO caches its last snapshot, but the engine's
+    /// copy is private and the observer dispatches on `.main` (which may not
+    /// hold the engine's lock), so the adapter mirrors the cache here.
     private var lastSnapshot: Sensors_List? = nil
+    private let lastSnapshotLock = NSLock()
 
     public init(helper: FanCurveHelper, store: ProfileStore,
                 clock: FanControllerClock = SystemFanControllerClock()) {
         self.helper = helper
         self.store = store
-        self.clock = clock
+        self.engine = FanCurveEngine(
+            helper: helper,
+            takeover: StoreBackedTakeover(),
+            clock: clock,
+            logger: KitInfoLogger()
+        )
         let workspaceNC = NSWorkspace.shared.notificationCenter
         observers.append((workspaceNC, workspaceNC.addObserver(
             forName: NSWorkspace.willSleepNotification,
             object: nil, queue: .main) { [weak self] _ in
-            self?.handleWillSleep()
+            self?.engine.handleWillSleep()
         }))
         observers.append((workspaceNC, workspaceNC.addObserver(
             forName: NSWorkspace.didWakeNotification,
             object: nil, queue: .main) { [weak self] _ in
-            self?.handleDidWake()
+            self?.engine.handleDidWake()
         }))
         let defaultNC = NotificationCenter.default
         observers.append((defaultNC, defaultNC.addObserver(
             forName: .fanProfileChanged, object: nil, queue: .main) { [weak self] _ in
             guard let self = self else { return }
-            self.stateLock.lock()
-            // Clear per-tick smoothing/hysteresis state so the new profile's
-            // first decision isn't biased by stale samples or the prior
-            // profile's lastApplied/lastTempForHyst values.
-            self.lastApplied.removeAll()
-            self.lastTempForHyst.removeAll()
-            self.tempSamples.removeAll()
-            self.batteryHotSince = nil
-            // User-initiated profile change implies fresh intent — drop any
-            // Apple-override quarantine so newly-relevant fans get retried.
-            self.appleOverridden.removeAll()
-            self.overrideStreak.removeAll()
-
-            let newProfileIsApple = (self.store.activeProfile()?.points.isEmpty ?? true)
-            let snapshot = self.lastSnapshot
-
-            if newProfileIsApple {
-                // Apple Auto / no curve. relinquishLocked iterates the
-                // still-populated managedFans set and writes .automatic to SMC
-                // for each fan we own (skipping fans whose Store key marks user
-                // takeover — Manual/Off/Max from popup). It also clears
-                // managedFans, lastSetMode, and overrideStreak at the end.
-                // CRITICAL: this MUST run before any managedFans.removeAll() —
-                // otherwise the iteration is over an empty set and fans stay
-                // stuck in .forced mode forever.
-                self.relinquishLocked()
-            } else {
-                // Non-Apple profile. Clear managedFans + lastSetMode so the
-                // immediate re-tick below re-asserts setFanMode(.forced) for
-                // each fan and writes the new profile's curve to SMC.
-                self.managedFans.removeAll()
-                self.lastSetMode.removeAll()
-            }
-            self.stateLock.unlock()
-
-            // Synchronously apply the new non-Apple profile in this call —
-            // eliminates ~1s lag waiting for the next reader tick. tick()
-            // re-acquires stateLock so the brief unlock/relock here is fine.
-            // Skip when activeProfile is empty (Apple Auto): tick() would just
-            // call relinquishLocked again, which we already did above.
-            if !newProfileIsApple, let snapshot = snapshot {
-                self.tick(snapshot: snapshot)
-            }
+            // Refresh engine's view of profiles + active selection from the
+            // (app-side, Store-backed) ProfileStore, then ask the engine to
+            // synchronously re-apply against the most recent snapshot.
+            self.engine.setProfiles(self.store.loadProfiles())
+            self.engine.setActiveProfile(self.store.activeProfile())
+            self.lastSnapshotLock.lock()
+            let snapshot = self.lastSnapshot?.asEngineSnapshot()
+            self.lastSnapshotLock.unlock()
+            self.engine.applyProfileChange(snapshot: snapshot)
         }))
     }
 
@@ -187,281 +112,58 @@ public final class FanCurveController {
         for (center, token) in observers { center.removeObserver(token) }
     }
 
-    private func handleWillSleep() {
-        stateLock.lock()
-        isAsleep = true
-        relinquishLocked()
-        stateLock.unlock()
-    }
-
-    private func handleDidWake() {
-        stateLock.lock()
-        isAsleep = false
-        // First post-wake tick must not inherit pre-sleep derivative or
-        // smoothed temp — those samples are minutes/hours stale by wallclock.
-        tempSamples.removeAll()
-        batteryHotSince = nil
-        stateLock.unlock()
-    }
-
     #if DEBUG
-    public func handleWillSleepForTests() { handleWillSleep() }
-    public func handleDidWakeForTests() { handleDidWake() }
+    public func handleWillSleepForTests() { engine.handleWillSleep() }
+    public func handleDidWakeForTests() { engine.handleDidWake() }
+    /// Test hook — exposes the engine's median helper through the public
+    /// adapter type to preserve test API.
+    public static func _medianForTests(_ values: [Double]) -> Double {
+        FanCurveEngine._medianForTests(values)
+    }
     #endif
 
     public func tick(snapshot: Sensors_List?) {
-        stateLock.lock()
-        defer { stateLock.unlock() }
-
-        guard !isAsleep, let snapshot = snapshot else { return }
-        // Cache the most recent valid snapshot so the .fanProfileChanged
-        // observer can synchronously re-tick on user picker action without
-        // waiting for the next reader tick.
-        lastSnapshot = snapshot
-
-        // If the helper went away mid-session (user uninstalled it, the
-        // launchd daemon crashed, file deleted), our cached managedFans set
-        // is stale — any reinstall would think fans are already managed and
-        // skip the setFanMode(.forced) re-assertion. Drop our state so the
-        // next valid tick rebuilds cleanly.
-        guard helper.isActive() else {
-            if !managedFans.isEmpty {
-                managedFans.removeAll()
-                lastApplied.removeAll()
-                lastTempForHyst.removeAll()
-                tempSamples.removeAll()
-                batteryHotSince = nil
-                lastSetMode.removeAll()
-                overrideStreak.removeAll()
-            }
-            return
+        // Cache the Sensors_List itself for the profile-change observer.
+        if let snapshot = snapshot {
+            lastSnapshotLock.lock()
+            lastSnapshot = snapshot
+            lastSnapshotLock.unlock()
         }
-
-        let fans = snapshot.sensors.compactMap { $0 as? Fan }
-
-        // Apple-override detection runs BEFORE the per-fan apply loop so that
-        // this tick's writes (lastSetMode updates) don't bias the comparison.
-        // `fan.smcMode` reflects the SMC state captured by readers.swift just
-        // before this callback fired — i.e. AFTER the previous tick's writes
-        // had a chance to take effect.
-        detectAppleOverridesLocked(fans: fans)
-
-        if !didBootstrap, !fans.isEmpty {
-            let maxRpm = Int(fans.map(\.maxSpeed).max() ?? 7000)
-            let wasEmpty = store.loadProfiles().isEmpty
-            store.bootstrapIfNeeded(fanCount: fans.count, defaultMaxRPM: maxRpm)
-            didBootstrap = true
-            if wasEmpty {
-                // Bootstrap just populated 6 profiles + activated Aggressive.
-                // Tell observers (popup picker, settings editor) to reload —
-                // otherwise the picker stays empty until something else
-                // triggers a notification.
-                DispatchQueue.main.async {
-                    NotificationCenter.default.post(name: .fanProfileChanged, object: nil)
+        // Bootstrap profiles on the first tick that actually has fan info —
+        // adapter responsibility because the engine is decoupled from
+        // `ProfileStore` and doesn't know fan count / maxSpeed at init.
+        if let snapshot = snapshot {
+            let fans = snapshot.sensors.compactMap { $0 as? Fan }
+            if !didBootstrap, !fans.isEmpty {
+                let maxRpm = Int(fans.map(\.maxSpeed).max() ?? 7000)
+                let wasEmpty = store.loadProfiles().isEmpty
+                store.bootstrapIfNeeded(fanCount: fans.count, defaultMaxRPM: maxRpm)
+                didBootstrap = true
+                if wasEmpty {
+                    DispatchQueue.main.async {
+                        NotificationCenter.default.post(name: .fanProfileChanged, object: nil)
+                    }
                 }
             }
+            // Refresh the engine's profile state from the Store every tick.
+            // Cheap (one Store read + JSON decode + lookup); keeps the engine
+            // in sync without requiring observers to push on every setter.
+            engine.setProfiles(store.loadProfiles())
+            engine.setActiveProfile(store.activeProfile())
         }
-
-        guard let profile = store.activeProfile(),
-              !profile.points.isEmpty else {
-            relinquishLocked()
-            return
-        }
-
-        guard let effTemp = FanCurve.effectiveTemperature(
-            sensors: snapshot.sensors, drivers: profile.drivers) else {
-            // Drivers no longer match any sensor — release management so the
-            // fan returns to firmware automatic instead of being stuck at the
-            // last applied RPM.
-            relinquishLocked()
-            return
-        }
-
-        let now = clock.now()
-        tempSamples.append((ts: now, temp: effTemp))
-        tempSamples.removeAll(where: { now.timeIntervalSince($0.ts) > Self.sampleWindowSeconds })
-        // Median of the last (up to) 3 in-window samples — kills single-tick
-        // HID jitter spikes that would otherwise bounce fans up/down.
-        let smoothedTemp = Self.median(tempSamples.suffix(3).map(\.temp))
-        let derivative = computeDerivative(now: now)
-        let derivativeBonus = (derivative >= Self.derivativeThresholdCPerSec)
-            ? Self.derivativeBonusRPM : 0
-        let batteryFloor = computeBatterySafetyFloor(snapshot: snapshot, now: now)
-
-        for fan in fans {
-            let base = FanCurve.interpolate(points: profile.points, tempC: smoothedTemp)
-            let off = (fan.id == 0) ? 0 : profile.fanOffsetRPM
-            // Clamp to fan limits AFTER adding offset + derivative bonus, then
-            // raise to the battery floor (also clamped to maxSpeed so a hot
-            // battery on a slow fan can't exceed mechanical limit).
-            let raw = base + off + derivativeBonus
-            var target = clamp(raw, Int(fan.minSpeed), Int(fan.maxSpeed))
-            if batteryFloor > 0 {
-                target = max(target, min(batteryFloor, Int(fan.maxSpeed)))
-            }
-            applyIfNeeded(fan: fan, target: target, temp: smoothedTemp,
-                          hysteresisC: profile.hysteresisC,
-                          deltaThreshold: profile.deltaRpmThreshold)
-        }
-    }
-
-    /// dT/dt over the most recent `derivativeWindowSeconds` of samples.
-    /// Returns 0 if fewer than 2 samples or zero elapsed time.
-    private func computeDerivative(now: Date) -> Double {
-        let cutoff = now.addingTimeInterval(-Self.derivativeWindowSeconds)
-        let recent = tempSamples.filter { $0.ts >= cutoff }
-        guard let first = recent.first, let last = recent.last, first.ts != last.ts else { return 0 }
-        let dt = last.ts.timeIntervalSince(first.ts)
-        guard dt > 0 else { return 0 }
-        return (last.temp - first.temp) / dt
-    }
-
-    /// Returns the battery safety floor in RPM (0 = no floor).
-    /// Floor engages only after `batterySafetyDelaySeconds` of sustained heat
-    /// so a brief surface spike doesn't spin fans up unnecessarily.
-    private func computeBatterySafetyFloor(snapshot: Sensors_List, now: Date) -> Int {
-        let battTemps = snapshot.sensors
-            .filter { Self.batteryKeys.contains($0.key) && $0.type == .temperature }
-            .map(\.value)
-        guard let maxBatt = battTemps.max() else {
-            batteryHotSince = nil
-            return 0
-        }
-        if maxBatt < Self.batterySafetyTempC {
-            batteryHotSince = nil
-            return 0
-        }
-        if batteryHotSince == nil {
-            batteryHotSince = now
-            return 0
-        }
-        if now.timeIntervalSince(batteryHotSince!) >= Self.batterySafetyDelaySeconds {
-            return Self.batterySafetyFloorRPM
-        }
-        return 0
-    }
-
-    /// Compare every fan we last wrote `.forced` to against its current
-    /// `smcMode` (per-tick SMC refresh). After `appleOverrideThreshold`
-    /// consecutive ticks of finding `.automatic` where we asked for `.forced`,
-    /// the fan is considered hijacked by firmware and relinquished for this
-    /// session — no more SMC writes for it until profile change / restart.
-    /// nil `smcMode` (SMC read failed) leaves the streak unchanged rather
-    /// than guessing.
-    /// Caller MUST hold `stateLock`.
-    private func detectAppleOverridesLocked(fans: [Fan]) {
-        for fan in fans {
-            guard lastSetMode[fan.id] == .forced else { continue }
-            guard let smcMode = fan.smcMode else { continue }
-            if smcMode == .forced {
-                overrideStreak[fan.id] = 0
-                continue
-            }
-            if smcMode == .automatic {
-                let streak = (overrideStreak[fan.id] ?? 0) + 1
-                if streak >= Self.appleOverrideThreshold {
-                    info("Apple firmware overrode fan \(fan.id), relinquishing for this session")
-                    appleOverridden.insert(fan.id)
-                    managedFans.remove(fan.id)
-                    lastApplied.removeValue(forKey: fan.id)
-                    lastTempForHyst.removeValue(forKey: fan.id)
-                    lastSetMode.removeValue(forKey: fan.id)
-                    overrideStreak.removeValue(forKey: fan.id)
-                } else {
-                    overrideStreak[fan.id] = streak
-                }
-            }
-        }
-    }
-
-    private static func median(_ values: [Double]) -> Double {
-        guard !values.isEmpty else { return 0 }
-        let sorted = values.sorted()
-        let n = sorted.count
-        return n % 2 == 1 ? sorted[n / 2] : (sorted[n / 2 - 1] + sorted[n / 2]) / 2.0
-    }
-
-    #if DEBUG
-    /// Test hook — exposes the private median helper without leaking internals
-    /// at release. Tests assert median behavior directly rather than only via
-    /// emergent smoothing output.
-    public static func _medianForTests(_ values: [Double]) -> Double { median(values) }
-    #endif
-
-    private func applyIfNeeded(fan: Fan, target: Int, temp: Double,
-                               hysteresisC: Double, deltaThreshold: Int) {
-        // Apple thermal firmware kept reverting our `.forced` write — fan was
-        // relinquished for this session. Stay out of its way until the user
-        // changes profile (clears state) or the app restarts.
-        if appleOverridden.contains(fan.id) { return }
-        // User has taken manual control (Manual/Off/Max from popup) — yield.
-        if fan.customMode == .forced {
-            managedFans.remove(fan.id)
-            lastApplied.removeValue(forKey: fan.id)
-            lastTempForHyst.removeValue(forKey: fan.id)
-            return
-        }
-        if !managedFans.contains(fan.id) {
-            helper.setFanMode(id: fan.id, mode: FanMode.forced.rawValue)
-            // Record Stats-controlled state so popup and willTerminate know not
-            // to override us, and so relinquish on next launch can clean up
-            // crashed sessions.
-            Store.shared.set(key: "fan_\(fan.id)_mode", value: FanMode.curve.rawValue)
-            managedFans.insert(fan.id)
-            // Record successful `.forced` write so next tick's
-            // detectAppleOverridesLocked can spot a silent revert by firmware.
-            lastSetMode[fan.id] = .forced
-        }
-        let last = lastApplied[fan.id]
-        let lastTemp = lastTempForHyst[fan.id] ?? -.greatestFiniteMagnitude
-
-        if let last = last {
-            let isLowering = target < last
-            if isLowering && (lastTemp - temp) < hysteresisC {
-                return
-            }
-            if abs(target - last) < deltaThreshold {
-                return
-            }
-        }
-
-        helper.setFanSpeed(id: fan.id, value: target)
-        lastApplied[fan.id] = target
-        lastTempForHyst[fan.id] = temp
+        engine.tick(snapshot: snapshot?.asEngineSnapshot())
     }
 
     public func shutdown() {
-        stateLock.lock()
-        relinquishLocked()
-        stateLock.unlock()
-    }
-
-    /// Caller MUST hold `stateLock`.
-    private func relinquishLocked() {
-        for id in managedFans {
-            // Don't fight a user who picked Manual/Off/Max — they own this fan.
-            let raw = Store.shared.int(key: "fan_\(id)_mode", defaultValue: -1)
-            if raw == FanMode.forced.rawValue { continue }
-            helper.setFanMode(id: id, mode: FanMode.automatic.rawValue)
-            Store.shared.set(key: "fan_\(id)_mode", value: FanMode.automatic.rawValue)
-        }
-        managedFans.removeAll()
-        lastApplied.removeAll()
-        lastTempForHyst.removeAll()
-        tempSamples.removeAll()
-        batteryHotSince = nil
-        // Clear last-write tracking and streaks so we don't false-positive on
-        // a stale `.forced` after we've stopped writing. appleOverridden
-        // (session-wide quarantine) is intentionally preserved — only the
-        // user picker action or app restart clears it.
-        lastSetMode.removeAll()
-        overrideStreak.removeAll()
-    }
-
-    private func clamp(_ v: Int, _ lo: Int, _ hi: Int) -> Int {
-        max(lo, min(hi, v))
+        engine.shutdown()
     }
 }
+
+// MARK: - SMCHelperAdapter
+//
+// Real `FanCurveHelper` implementation bridging to `Kit.SMCHelper`. Kept here
+// (not in FanCore) because it depends on `Kit.SMCHelper` and the privileged
+// helper's on-disk path — both app-only concerns.
 
 /// Bridges the existing `Kit.SMCHelper` to the narrow `FanCurveHelper` protocol.
 ///

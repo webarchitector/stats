@@ -301,21 +301,28 @@ final class SensorsTests: XCTestCase {
                group: .CPU, type: .temperature, platforms: Platform.all)
     }
 
+    /// Bridge `[Sensor_p]` → `[FanCoreSensor]` for tests. `FanCurve.effectiveTemperature`
+    /// now lives in FanCore and takes the engine-facing sensor protocol;
+    /// `Sensor_p` projects to it via `asFanCoreSensor()`.
+    private func core(_ sensors: [Sensor_p]) -> [FanCoreSensor] {
+        sensors.map { $0.asFanCoreSensor() }
+    }
+
     func testEffectiveTemperature_emptyDrivers_returnsNil() {
-        let r = FanCurve.effectiveTemperature(sensors: [], drivers: [])
+        let r = FanCurve.effectiveTemperature(sensors: [FanCoreSensor](), drivers: [])
         XCTAssertNil(r)
     }
 
     func testEffectiveTemperature_noMatchingSensors_returnsNil() {
         let sensors: [Sensor_p] = [makeTempSensor(key: "TC0D", value: 60)]
-        let r = FanCurve.effectiveTemperature(sensors: sensors,
+        let r = FanCurve.effectiveTemperature(sensors: core(sensors),
                 drivers: [DriverSensor(key: "MISSING")])
         XCTAssertNil(r)
     }
 
     func testEffectiveTemperature_singleDriver_returnsItsValue() {
         let sensors: [Sensor_p] = [makeTempSensor(key: "TC0D", value: 65.5)]
-        let r = FanCurve.effectiveTemperature(sensors: sensors,
+        let r = FanCurve.effectiveTemperature(sensors: core(sensors),
                 drivers: [DriverSensor(key: "TC0D")])
         XCTAssertEqual(r, 65.5)
     }
@@ -326,7 +333,7 @@ final class SensorsTests: XCTestCase {
             makeTempSensor(key: "TG0D", value: 75),
             makeTempSensor(key: "TCAD", value: 55),
         ]
-        let r = FanCurve.effectiveTemperature(sensors: sensors,
+        let r = FanCurve.effectiveTemperature(sensors: core(sensors),
                 drivers: [DriverSensor(key: "TC0D"),
                           DriverSensor(key: "TG0D"),
                           DriverSensor(key: "TCAD")])
@@ -337,7 +344,7 @@ final class SensorsTests: XCTestCase {
         let sensors: [Sensor_p] = [
             makeTempSensor(key: "TC0D", value: 60),
         ]
-        let r = FanCurve.effectiveTemperature(sensors: sensors,
+        let r = FanCurve.effectiveTemperature(sensors: core(sensors),
                 drivers: [DriverSensor(key: "TC0D"),
                           DriverSensor(key: "MISSING")])
         XCTAssertEqual(r, 60)

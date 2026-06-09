@@ -338,53 +338,66 @@ public struct Fan: Sensor_p, Codable {
 }
 
 // MARK: - Fan Curve
+//
+// `CurvePoint`, `DriverSensor`, `FanProfile` now live in `FanCore/Types.swift`,
+// compiled into this target's Sources phase so they are still part of the
+// `Sensors` module namespace to external callers (Stats, Tests). See
+// `FanCore/FanProfileBuiltins.swift` for `FanProfile.builtIns` and
+// `FanProfile.appleAutoID`.
 
-public struct CurvePoint: Codable, Equatable, Hashable {
-    public var tempC: Double
-    public var rpm: Int
+// MARK: - FanCore bridge
 
-    public init(tempC: Double, rpm: Int) {
-        self.tempC = tempC
-        self.rpm = rpm
+/// Snapshot view of a `Sensor_p` reduced to the minimal `FanCoreSensor`
+/// surface the engine consumes (key/name/value/type). Captures the value at
+/// build time so the engine's iteration doesn't indirect through the richer
+/// `Sensor_p` (which carries widget state, store accessors, locale-aware
+/// formatting, etc. — all irrelevant to the curve loop).
+fileprivate struct SensorPBridge: FanCoreSensor {
+    let key: String
+    let name: String
+    let value: Double
+    let type: FanCoreSensorType
+}
+
+extension Sensor_p {
+    /// Project a `Sensor_p` (which is rich with widget/store state) down to the
+    /// minimal `FanCoreSensor` surface the engine consumes.
+    public func asFanCoreSensor() -> FanCoreSensor {
+        let kind: FanCoreSensorType
+        switch self.type {
+        case .temperature: kind = .temperature
+        case .fan:         kind = .fan
+        default:           kind = .other
+        }
+        return SensorPBridge(key: self.key, name: self.name, value: self.value, type: kind)
     }
 }
 
-public struct DriverSensor: Codable, Equatable, Hashable {
-    public var key: String
-    public var weight: Double
-
-    public init(key: String, weight: Double = 1.0) {
-        self.key = key
-        self.weight = weight
+extension Fan {
+    /// Build the per-fan snapshot the engine consumes. `userTookOver` mirrors
+    /// the Stats "Manual/Off/Max picker active" semantic (`customMode == .forced`).
+    public func asFanSnapshot() -> FanSnapshot {
+        FanSnapshot(
+            id: self.id,
+            minSpeed: self.minSpeed,
+            maxSpeed: self.maxSpeed,
+            value: self.value,
+            smcMode: self.smcMode,
+            userTookOver: (self.customMode == .forced)
+        )
     }
 }
 
-public struct FanProfile: Codable, Equatable, Hashable, Identifiable {
-    public var id: UUID
-    public var name: String
-    public var isBuiltIn: Bool
-    public var drivers: [DriverSensor]
-    public var points: [CurvePoint]
-    public var fanOffsetRPM: Int
-    public var hysteresisC: Double
-    public var deltaRpmThreshold: Int
-
-    public init(id: UUID = UUID(),
-                name: String,
-                isBuiltIn: Bool = false,
-                drivers: [DriverSensor],
-                points: [CurvePoint],
-                fanOffsetRPM: Int = 50,
-                hysteresisC: Double = 2.0,
-                deltaRpmThreshold: Int = 150) {
-        self.id = id
-        self.name = name
-        self.isBuiltIn = isBuiltIn
-        self.drivers = drivers
-        self.points = points
-        self.fanOffsetRPM = fanOffsetRPM
-        self.hysteresisC = hysteresisC
-        self.deltaRpmThreshold = deltaRpmThreshold
+extension Sensors_List {
+    /// Snapshot conversion for `FanCurveEngine.tick`. Fans become `FanSnapshot`s
+    /// and all sensors are routed through `asFanCoreSensor()` (fans included —
+    /// the engine ignores non-temperature sensors via `effectiveTemperature`'s
+    /// key filter, but consistent shape simplifies the protocol surface).
+    public func asEngineSnapshot() -> EngineSnapshot {
+        let snap = self.sensors
+        let fans = snap.compactMap { ($0 as? Fan)?.asFanSnapshot() }
+        let sensors = snap.map { $0.asFanCoreSensor() }
+        return EngineSnapshot(sensors: sensors, fans: fans)
     }
 }
 

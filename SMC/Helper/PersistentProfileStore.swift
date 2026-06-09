@@ -28,11 +28,22 @@ final class PersistentProfileStore {
         return try? JSONDecoder().decode(FanProfile.self, from: data)
     }
 
-    func setActive(_ profile: FanProfile?) {
-        if let profile = profile, let data = try? JSONEncoder().encode(profile) {
-            try? data.write(to: Self.activeURL, options: .atomic)
-        } else {
-            try? FileManager.default.removeItem(at: Self.activeURL)
+    /// Returns false (and logs) if the write/remove failed, so the XPC caller
+    /// can report the failure instead of silently believing it succeeded.
+    @discardableResult
+    func setActive(_ profile: FanProfile?) -> Bool {
+        do {
+            if let profile = profile {
+                let data = try JSONEncoder().encode(profile)
+                try data.write(to: Self.activeURL, options: .atomic)
+            } else if FileManager.default.fileExists(atPath: Self.activeURL.path) {
+                // Absent file = already cleared (Apple Auto) — that's success.
+                try FileManager.default.removeItem(at: Self.activeURL)
+            }
+            return true
+        } catch {
+            NSLog("PersistentProfileStore.setActive failed: \(error)")
+            return false
         }
     }
 
@@ -41,9 +52,15 @@ final class PersistentProfileStore {
         return (try? JSONDecoder().decode([FanProfile].self, from: data)) ?? []
     }
 
-    func saveAll(_ profiles: [FanProfile]) {
-        if let data = try? JSONEncoder().encode(profiles) {
-            try? data.write(to: Self.profilesURL, options: .atomic)
+    @discardableResult
+    func saveAll(_ profiles: [FanProfile]) -> Bool {
+        do {
+            let data = try JSONEncoder().encode(profiles)
+            try data.write(to: Self.profilesURL, options: .atomic)
+            return true
+        } catch {
+            NSLog("PersistentProfileStore.saveAll failed: \(error)")
+            return false
         }
     }
 }

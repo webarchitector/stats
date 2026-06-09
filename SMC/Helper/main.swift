@@ -32,6 +32,7 @@ class Helper: NSObject, NSXPCListenerDelegate, HelperProtocol {
     private var sensorReader: HelperSensorReader?
     private var engine: FanCurveEngine?
     private var runloop: DaemonRunloop?
+    private var signalSource: DispatchSourceSignal?
 
     override init() {
         self.listener = NSXPCListener(machServiceName: "eu.exelban.Stats.SMC.Helper")
@@ -54,10 +55,28 @@ class Helper: NSObject, NSXPCListenerDelegate, HelperProtocol {
 
         self.listener.resume()
         self.bootEngine()
+        self.installTerminationHandler()
         // No `shouldQuit` flag — the daemon stays alive after Stats.app
         // disconnects so the curve keeps running. launchd KeepAlive will
         // restart us on crash; explicit termination only via `uninstall`.
         RunLoop.current.run()
+    }
+
+    /// launchctl bootout / `kill` sends SIGTERM before the eventual SIGKILL.
+    /// Relinquish every managed fan back to firmware automatic so fans don't
+    /// stay latched at the curve's last forced RPM after the daemon goes away.
+    /// A dispatch signal source (not a raw `signal(2)` handler) runs the work
+    /// on the main queue where the engine's locks and SMC writes are safe —
+    /// raw handlers are restricted to async-signal-safe calls.
+    private func installTerminationHandler() {
+        signal(SIGTERM, SIG_IGN)
+        let src = DispatchSource.makeSignalSource(signal: SIGTERM, queue: .main)
+        src.setEventHandler { [weak self] in
+            self?.engine?.shutdown()
+            exit(0)
+        }
+        src.resume()
+        self.signalSource = src
     }
 
     private func bootEngine() {
@@ -243,6 +262,9 @@ extension Helper {
     }
     
     func uninstall() {
+        // Relinquish managed fans before tearing down so they don't stay
+        // stuck in `.forced` if this path is hit without a SIGTERM.
+        self.engine?.shutdown()
         let process = Process()
         process.launchPath = "/Library/PrivilegedHelperTools/eu.exelban.Stats.SMC.Helper"
         process.qualityOfService = QualityOfService.userInitiated
@@ -261,16 +283,16 @@ extension Helper {
         // Empty payload = clear active (Apple Auto). Anything else must decode
         // as a single FanProfile.
         if data.isEmpty {
-            store.setActive(nil)
+            let ok = store.setActive(nil)
             runloop.applyProfileChange()
-            completion(nil)
+            completion(ok ? nil : "failed to clear active profile")
             return
         }
         do {
             let profile = try JSONDecoder().decode(FanProfile.self, from: data)
-            store.setActive(profile)
+            let ok = store.setActive(profile)
             runloop.applyProfileChange()
-            completion(nil)
+            completion(ok ? nil : "failed to persist active profile")
         } catch {
             NSLog("setActiveProfileJSON decode error: \(error)")
             completion("decode error: \(error.localizedDescription)")
@@ -284,13 +306,13 @@ extension Helper {
         }
         do {
             let profiles = try JSONDecoder().decode([FanProfile].self, from: data)
-            store.saveAll(profiles)
+            let ok = store.saveAll(profiles)
             // Profiles list changed but active stays the same — next tick
             // picks it up via `store.loadAll()` so no immediate re-tick is
             // strictly required. Still re-tick so picker latency is uniform
             // across all profile-mutating XPC calls.
             self.runloop?.applyProfileChange()
-            completion(nil)
+            completion(ok ? nil : "failed to persist profiles")
         } catch {
             NSLog("saveProfilesJSON decode error: \(error)")
             completion("decode error: \(error.localizedDescription)")

@@ -655,7 +655,7 @@ internal class FanView: NSStackView {
             y: 4,
             width: view.frame.width,
             height: view.frame.height - 8
-        ), mode: self.fan.mode)
+        ), mode: self.fan.mode, fanID: self.fan.id)
         buttons.callback = { [weak self] (mode: FanMode) in
             if let fan = self?.fan, mode == .automatic || fan.mode != mode {
                 self?.fan.mode = mode
@@ -1026,6 +1026,7 @@ private class ModeButtons: NSStackView {
     public var off: () -> Void = {}
 
     private let popup = NSPopUpButton()
+    private let fanID: Int
     private static let manualTag = "__manual"
     private static let offTag = "__off"
     private static let maxTag = "__max"
@@ -1033,16 +1034,20 @@ private class ModeButtons: NSStackView {
     /// profile is picked, this is cleared (the profile itself is "current
     /// state of the world" via activeProfileID). When set, takes priority
     /// over the active profile in `reloadItems` selection.
-    private static let lastActionKey = "fanctl_lastAction"
+    /// Keyed per fan id — each fan has its own `ModeButtons`, so a global key
+    /// would make one fan's Manual/Off/Max selection bleed into every other
+    /// fan's picker on the next rebuild.
+    private var lastActionKey: String { "fanctl_lastAction_\(self.fanID)" }
     private var lastActionTag: String? {
         get {
-            let raw = Store.shared.string(key: Self.lastActionKey, defaultValue: "")
+            let raw = Store.shared.string(key: self.lastActionKey, defaultValue: "")
             return raw.isEmpty ? nil : raw
         }
-        set { Store.shared.set(key: Self.lastActionKey, value: newValue ?? "") }
+        set { Store.shared.set(key: self.lastActionKey, value: newValue ?? "") }
     }
 
-    public init(frame: NSRect, mode: FanMode) {
+    public init(frame: NSRect, mode: FanMode, fanID: Int) {
+        self.fanID = fanID
         super.init(frame: frame)
 
         self.orientation = .horizontal

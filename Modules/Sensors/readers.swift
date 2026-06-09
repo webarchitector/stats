@@ -130,7 +130,7 @@ internal class SensorsReader: Reader<Sensors_List> {
         for i in self.list.sensors.indices {
             guard self.list.sensors[i].group != .hid && !self.list.sensors[i].isComputed else { continue }
             if !self.unknownSensorsState && self.list.sensors[i].group == .unknown { continue }
-            
+
             var newValue = SMC.shared.getValue(self.list.sensors[i].key) ?? 0
             if self.list.sensors[i].type == .temperature && self.list.sensors[i].group == .CPU &&
                 (newValue < 10 || newValue > 120) { // fix for m2 broken sensors
@@ -138,7 +138,24 @@ internal class SensorsReader: Reader<Sensors_List> {
             }
             self.list.sensors[i].value = newValue
         }
-        
+
+        // Per-tick SMC fan-mode refresh — feeds the Apple-override failsafe in
+        // FanCurveController. Mirrors the read pattern in loadFans(): probe
+        // F<i>Md (or F<i>md), parse to FanMode, normalize auto3 → automatic
+        // so the controller's `.forced` vs `.automatic` comparison is stable.
+        // Stored on a NEW Fan.smcMode field — Fan.mode is the snapshot init
+        // value and is intentionally left alone. ~1ms per fan per tick.
+        for i in self.list.sensors.indices {
+            guard var fan = self.list.sensors[i] as? Fan, !fan.isComputed else { continue }
+            if let md = SMC.shared.getValue(SMC.shared.fanModeKey(fan.id)), let parsed = FanMode(rawValue: Int(md)) {
+                fan.smcMode = parsed.isAutomatic ? .automatic : parsed
+            } else {
+                fan.smcMode = nil
+            }
+            self.list.sensors[i] = fan
+        }
+
+
         var cpuSensors = self.list.sensors.filter({ $0.group == .CPU && $0.type == .temperature && $0.average }).map{ $0.value }
         var gpuSensors = self.list.sensors.filter({ $0.group == .GPU && $0.type == .temperature && $0.average }).map{ $0.value }
         let fanSensors = self.list.sensors.filter({ $0.type == .fan && !$0.isComputed })

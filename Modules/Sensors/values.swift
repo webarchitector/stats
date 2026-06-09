@@ -253,7 +253,18 @@ public struct Fan: Sensor_p, Codable {
     public var maxSpeed: Double
     public var value: Double
     public var mode: FanMode
-    
+
+    /// Per-tick refresh of SMC F<i>Md, populated by `SensorsReader.read()` on
+    /// every cycle. Distinct from `mode` (snapshot at `loadFans()` init time)
+    /// and `customMode` (Stats-internal Store marker — never refreshed from
+    /// SMC). The Apple-override failsafe in `FanCurveController.tick()` reads
+    /// this to detect when firmware reverts our `.forced` write back to
+    /// `.automatic` without our knowledge. Optional because the SMC read can
+    /// fail (key absent / probe error) — in which case the failsafe leaves
+    /// the streak counter untouched rather than guessing.
+    public var smcMode: FanMode? = nil
+
+
     public var percentage: Int {
         if self.value != 0 && self.maxSpeed != 0 && self.value != 1 && self.maxSpeed != 1 {
             return (100*Int(self.value)) / Int(self.maxSpeed)

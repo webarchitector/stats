@@ -90,6 +90,20 @@ public final class FanCurveController {
         "TB0T", "TB1T", "TB2T", "gas gauge battery"
     ]
 
+    /// Apple-firmware override failsafe state. After we issue setFanMode(.forced)
+    /// for fan id X, `lastSetMode[X] = .forced`. On the next tick we compare
+    /// against `fan.smcMode` (per-tick SMC refresh in readers.swift). If
+    /// firmware (or another process) silently reverted us to `.automatic`,
+    /// `overrideStreak[X]` increments; at 3 consecutive mismatches we add X
+    /// to `appleOverridden` and stop writing SMC for it for the rest of the
+    /// session. Cleared on `.fanProfileChanged` (user picker action) and reset
+    /// across app restarts (in-memory only — Store.activeProfile stays put so
+    /// the picker still shows the user's selection).
+    private var appleOverridden: Set<Int> = []
+    private var lastSetMode: [Int: FanMode] = [:]
+    private var overrideStreak: [Int: Int] = [:]
+    private static let appleOverrideThreshold: Int = 3
+
     /// All mutable state above is guarded by this lock. tick() runs on the
     /// SensorsReader's background queue; sleep/wake/profile-change observers
     /// run on .main. Swift Dictionary is not thread-safe — concurrent read/write
@@ -127,6 +141,11 @@ public final class FanCurveController {
             self.lastTempForHyst.removeAll()
             self.tempSamples.removeAll()
             self.batteryHotSince = nil
+            // User-initiated profile change implies fresh intent — drop any
+            // Apple-override quarantine so newly-relevant fans get retried.
+            self.appleOverridden.removeAll()
+            self.lastSetMode.removeAll()
+            self.overrideStreak.removeAll()
             self.stateLock.unlock()
         }))
     }
@@ -175,11 +194,21 @@ public final class FanCurveController {
                 lastTempForHyst.removeAll()
                 tempSamples.removeAll()
                 batteryHotSince = nil
+                lastSetMode.removeAll()
+                overrideStreak.removeAll()
             }
             return
         }
 
         let fans = snapshot.sensors.compactMap { $0 as? Fan }
+
+        // Apple-override detection runs BEFORE the per-fan apply loop so that
+        // this tick's writes (lastSetMode updates) don't bias the comparison.
+        // `fan.smcMode` reflects the SMC state captured by readers.swift just
+        // before this callback fired — i.e. AFTER the previous tick's writes
+        // had a chance to take effect.
+        detectAppleOverridesLocked(fans: fans)
+
         if !didBootstrap, !fans.isEmpty {
             let maxRpm = Int(fans.map(\.maxSpeed).max() ?? 7000)
             let wasEmpty = store.loadProfiles().isEmpty
@@ -275,6 +304,39 @@ public final class FanCurveController {
         return 0
     }
 
+    /// Compare every fan we last wrote `.forced` to against its current
+    /// `smcMode` (per-tick SMC refresh). After `appleOverrideThreshold`
+    /// consecutive ticks of finding `.automatic` where we asked for `.forced`,
+    /// the fan is considered hijacked by firmware and relinquished for this
+    /// session — no more SMC writes for it until profile change / restart.
+    /// nil `smcMode` (SMC read failed) leaves the streak unchanged rather
+    /// than guessing.
+    /// Caller MUST hold `stateLock`.
+    private func detectAppleOverridesLocked(fans: [Fan]) {
+        for fan in fans {
+            guard lastSetMode[fan.id] == .forced else { continue }
+            guard let smcMode = fan.smcMode else { continue }
+            if smcMode == .forced {
+                overrideStreak[fan.id] = 0
+                continue
+            }
+            if smcMode == .automatic {
+                let streak = (overrideStreak[fan.id] ?? 0) + 1
+                if streak >= Self.appleOverrideThreshold {
+                    info("Apple firmware overrode fan \(fan.id), relinquishing for this session")
+                    appleOverridden.insert(fan.id)
+                    managedFans.remove(fan.id)
+                    lastApplied.removeValue(forKey: fan.id)
+                    lastTempForHyst.removeValue(forKey: fan.id)
+                    lastSetMode.removeValue(forKey: fan.id)
+                    overrideStreak.removeValue(forKey: fan.id)
+                } else {
+                    overrideStreak[fan.id] = streak
+                }
+            }
+        }
+    }
+
     private static func median(_ values: [Double]) -> Double {
         guard !values.isEmpty else { return 0 }
         let sorted = values.sorted()
@@ -291,6 +353,10 @@ public final class FanCurveController {
 
     private func applyIfNeeded(fan: Fan, target: Int, temp: Double,
                                hysteresisC: Double, deltaThreshold: Int) {
+        // Apple thermal firmware kept reverting our `.forced` write — fan was
+        // relinquished for this session. Stay out of its way until the user
+        // changes profile (clears state) or the app restarts.
+        if appleOverridden.contains(fan.id) { return }
         // User has taken manual control (Manual/Off/Max from popup) — yield.
         if fan.customMode == .forced {
             managedFans.remove(fan.id)
@@ -305,6 +371,9 @@ public final class FanCurveController {
             // crashed sessions.
             Store.shared.set(key: "fan_\(fan.id)_mode", value: FanMode.curve.rawValue)
             managedFans.insert(fan.id)
+            // Record successful `.forced` write so next tick's
+            // detectAppleOverridesLocked can spot a silent revert by firmware.
+            lastSetMode[fan.id] = .forced
         }
         let last = lastApplied[fan.id]
         let lastTemp = lastTempForHyst[fan.id] ?? -.greatestFiniteMagnitude
@@ -344,6 +413,12 @@ public final class FanCurveController {
         lastTempForHyst.removeAll()
         tempSamples.removeAll()
         batteryHotSince = nil
+        // Clear last-write tracking and streaks so we don't false-positive on
+        // a stale `.forced` after we've stopped writing. appleOverridden
+        // (session-wide quarantine) is intentionally preserved — only the
+        // user picker action or app restart clears it.
+        lastSetMode.removeAll()
+        overrideStreak.removeAll()
     }
 
     private func clamp(_ v: Int, _ lo: Int, _ hi: Int) -> Int {

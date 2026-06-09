@@ -610,9 +610,18 @@ final class SensorsTests: XCTestCase {
     // MARK: - Controller tick basics
 
     private func makeControllerFan(id: Int, min: Double = 1000, max: Double = 7000,
-                                   value: Double = 1000) -> Fan {
-        Fan(id: id, key: "F\(id)Ac", name: "Fan \(id)",
+                                   value: Double = 1000,
+                                   smcMode: FanMode? = nil) -> Fan {
+        var f = Fan(id: id, key: "F\(id)Ac", name: "Fan \(id)",
             minSpeed: min, maxSpeed: max, value: value, mode: .automatic)
+        // Fan.smcMode is the Sensors-target copy of FanMode (smc.swift is
+        // compiled into both Kit and Sensors targets — two distinct enum
+        // types at the Swift type level despite identical declarations).
+        // The class typealias pins bare `FanMode` to Kit.FanMode, so bridge
+        // here via rawValue, which is stable across both copies (locked by
+        // testFanMode_rawValues_matchSMC).
+        f.smcMode = smcMode.flatMap { type(of: f.mode).init(rawValue: $0.rawValue) }
+        return f
     }
 
     private func makeControllerSnapshot(fans: [Fan], temps: [(String, Double)]) -> Sensors_List {
@@ -1425,6 +1434,161 @@ final class SensorsTests: XCTestCase {
         // CPU at 35 → curve = 1000 + 5*100 = 1500 (above fan.minSpeed=1000).
         XCTAssertLessThan(fake.speedCalls.last?.rpm ?? 9999, 2500,
                        "drop below threshold must restart the dwell timer")
+        clearProfileStore()
+    }
+
+    // MARK: - Apple firmware override failsafe
+
+    /// Drive the controller through the override sequence: tick 1 writes
+    /// `.forced` for the fan; ticks 2..1+threshold report `.automatic` in
+    /// `smcMode` so the streak hits the threshold; subsequent ticks must
+    /// produce zero SMC writes for that fan id.
+    func testController_appleOverrideDetected_skipsFurtherWrites() {
+        clearProfileStore()
+        let store = enabledStoreWithCustomProfile(smartLinearProfile)
+        let fake = FakeFanCurveHelper()
+        let c = FanCurveController(helper: fake, store: store)
+        // Tick 1: SMC honors our forced write — smcMode reflects .forced (or
+        // unknown; either way no mismatch).
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0, smcMode: .forced)],
+            temps: [("TC0D", 60)]))
+        XCTAssertEqual(fake.modeCalls.count, 1, "first tick must issue setFanMode(.forced)")
+        XCTAssertGreaterThanOrEqual(fake.speedCalls.count, 1, "first tick must issue setFanSpeed")
+        // Ticks 2, 3, 4: SMC reports back .automatic each time — firmware is
+        // overriding us. After tick 4 the streak threshold (3) is hit and the
+        // fan id is moved into appleOverridden.
+        for _ in 0..<3 {
+            c.tick(snapshot: makeControllerSnapshot(
+                fans: [makeControllerFan(id: 0, smcMode: .automatic)],
+                temps: [("TC0D", 60)]))
+        }
+        // Tick 5+: applyIfNeeded must short-circuit on appleOverridden — no
+        // setFanMode AND no setFanSpeed calls for fan 0.
+        let modesBefore = fake.modeCalls.count
+        let speedsBefore = fake.speedCalls.count
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0, smcMode: .automatic)],
+            temps: [("TC0D", 65)]))
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0, smcMode: .automatic)],
+            temps: [("TC0D", 70)]))
+        XCTAssertEqual(fake.modeCalls.count, modesBefore,
+            "after override is detected, no further setFanMode for fan 0")
+        XCTAssertEqual(fake.speedCalls.count, speedsBefore,
+            "after override is detected, no further setFanSpeed for fan 0")
+        clearProfileStore()
+    }
+
+    /// Once override is triggered, a user picker action (`.fanProfileChanged`)
+    /// must wipe the quarantine so the controller resumes writing — including
+    /// re-issuing the initial `setFanMode(.forced)`.
+    func testController_appleOverride_clearedOnProfileChange() {
+        clearProfileStore()
+        let store = enabledStoreWithCustomProfile(smartLinearProfile)
+        let fake = FakeFanCurveHelper()
+        let c = FanCurveController(helper: fake, store: store)
+        // Drive into the override-detected state.
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0, smcMode: .forced)],
+            temps: [("TC0D", 60)]))
+        for _ in 0..<3 {
+            c.tick(snapshot: makeControllerSnapshot(
+                fans: [makeControllerFan(id: 0, smcMode: .automatic)],
+                temps: [("TC0D", 60)]))
+        }
+        // Confirm we're quarantined: a subsequent tick must produce no calls.
+        let modesAfterDetect = fake.modeCalls.count
+        let speedsAfterDetect = fake.speedCalls.count
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0, smcMode: .automatic)],
+            temps: [("TC0D", 65)]))
+        XCTAssertEqual(fake.modeCalls.count, modesAfterDetect, "precondition: quarantined")
+        XCTAssertEqual(fake.speedCalls.count, speedsAfterDetect, "precondition: quarantined")
+        // User picks a profile — observer (queue: .main) drains async.
+        fake.reset()
+        let exp = expectation(description: "observer drained")
+        NotificationCenter.default.post(name: .fanProfileChanged, object: nil)
+        DispatchQueue.main.async { exp.fulfill() }
+        wait(for: [exp], timeout: 1.0)
+        // Next tick (SMC now honors us again) must re-issue setFanMode(.forced)
+        // because both managedFans AND appleOverridden were cleared.
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0, smcMode: .forced)],
+            temps: [("TC0D", 60)]))
+        XCTAssertTrue(fake.modeCalls.contains(.init(id: 0, mode: Kit.FanMode.forced.rawValue)),
+            "fanProfileChanged must clear appleOverridden so controller resumes")
+        XCTAssertGreaterThanOrEqual(fake.speedCalls.count, 1,
+            "controller must resume writing speed after quarantine cleared")
+        _ = c
+        clearProfileStore()
+    }
+
+    /// A single mismatched tick (one .automatic read after a .forced write)
+    /// must NOT trigger the failsafe — only sustained mismatches do.
+    func testController_singleMismatch_doesNotTrigger() {
+        clearProfileStore()
+        let store = enabledStoreWithCustomProfile(smartLinearProfile)
+        let fake = FakeFanCurveHelper()
+        let c = FanCurveController(helper: fake, store: store)
+        // Tick 1: forced write succeeds.
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0, smcMode: .forced)],
+            temps: [("TC0D", 60)]))
+        // Tick 2: spurious automatic read (streak → 1).
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0, smcMode: .automatic)],
+            temps: [("TC0D", 65)]))
+        // Tick 3: SMC honors us again (streak resets to 0).
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0, smcMode: .forced)],
+            temps: [("TC0D", 70)]))
+        // Tick 4: at a clearly different temp, controller must still be
+        // writing — no false-positive quarantine.
+        fake.reset()
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0, smcMode: .forced)],
+            temps: [("TC0D", 75)]))
+        XCTAssertGreaterThanOrEqual(fake.speedCalls.count, 1,
+            "single mismatch must not quarantine the fan")
+        clearProfileStore()
+    }
+
+    /// The quarantine is in-memory only — a fresh `FanCurveController`
+    /// instance (simulating app restart) must write again under the same
+    /// override-trigger conditions.
+    func testController_overrideRestart_freshSession() {
+        clearProfileStore()
+        let store = enabledStoreWithCustomProfile(smartLinearProfile)
+        let fake1 = FakeFanCurveHelper()
+        let c1 = FanCurveController(helper: fake1, store: store)
+        // Trigger override in session 1.
+        c1.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0, smcMode: .forced)],
+            temps: [("TC0D", 60)]))
+        for _ in 0..<3 {
+            c1.tick(snapshot: makeControllerSnapshot(
+                fans: [makeControllerFan(id: 0, smcMode: .automatic)],
+                temps: [("TC0D", 60)]))
+        }
+        let modesBefore1 = fake1.modeCalls.count
+        let speedsBefore1 = fake1.speedCalls.count
+        c1.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0, smcMode: .automatic)],
+            temps: [("TC0D", 70)]))
+        XCTAssertEqual(fake1.modeCalls.count, modesBefore1, "session 1 must quarantine")
+        XCTAssertEqual(fake1.speedCalls.count, speedsBefore1, "session 1 must quarantine")
+        // Fresh controller instance (simulating restart) — no in-memory state.
+        let fake2 = FakeFanCurveHelper()
+        let c2 = FanCurveController(helper: fake2, store: store)
+        c2.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0, smcMode: .automatic)],
+            temps: [("TC0D", 60)]))
+        XCTAssertTrue(fake2.modeCalls.contains(.init(id: 0, mode: Kit.FanMode.forced.rawValue)),
+            "fresh controller must not inherit quarantine from previous instance")
+        XCTAssertGreaterThanOrEqual(fake2.speedCalls.count, 1,
+            "fresh controller must write speed under same conditions")
+        _ = c1
         clearProfileStore()
     }
 }

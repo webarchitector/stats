@@ -12,10 +12,28 @@
 #import <Foundation/Foundation.h>
 #import "bridge.h"
 
-NSDictionary*AppleSiliconSensors(int32_t page, int32_t usage, int32_t type) {
-    NSDictionary* dictionary = @{@"PrimaryUsagePage":@(page),@"PrimaryUsage":@(usage)};
+// macOS 27 logs every short-lived IOHIDEventSystemClient under
+// com.apple.iohid:oversized ("Released connection: <UUID>"). The helper
+// polls sensors once a second, so a per-call create+release produced ~60
+// events/min of pure log noise. Cache the client for the lifetime of the
+// daemon; matching is reset per call (cheap).
+static IOHIDEventSystemClientRef sharedHIDClient = NULL;
+static dispatch_once_t sharedHIDClientOnce;
 
-    IOHIDEventSystemClientRef system = IOHIDEventSystemClientCreate(kCFAllocatorDefault);
+static IOHIDEventSystemClientRef getSharedHIDClient(void) {
+    dispatch_once(&sharedHIDClientOnce, ^{
+        sharedHIDClient = IOHIDEventSystemClientCreate(kCFAllocatorDefault);
+    });
+    return sharedHIDClient;
+}
+
+NSDictionary*AppleSiliconSensors(int32_t page, int32_t usage, int32_t type) {
+    IOHIDEventSystemClientRef system = getSharedHIDClient();
+    if (system == NULL) {
+        return nil;
+    }
+
+    NSDictionary* dictionary = @{@"PrimaryUsagePage":@(page),@"PrimaryUsage":@(usage)};
     IOHIDEventSystemClientSetMatching(system, (__bridge CFDictionaryRef)dictionary);
     CFArrayRef services = IOHIDEventSystemClientCopyServices(system);
     if (services == nil) {
@@ -41,7 +59,6 @@ NSDictionary*AppleSiliconSensors(int32_t page, int32_t usage, int32_t type) {
     }
 
     CFRelease(services);
-    CFRelease(system);
 
     return dict;
 }

@@ -993,34 +993,48 @@ public class SMCHelper {
     // `resetFanControl` methods above stay in place for the app's fallback
     // path while Phase 5 cuts the in-app controller over to the daemon.
 
+    // Each v2 wrapper acquires a proxy whose transport-error handler fires the
+    // caller's completion with a failure sentinel. `remoteObjectProxyWith-
+    // ErrorHandler`'s handler runs INSTEAD of the reply block when the message
+    // can't be delivered (connection invalidated, unimplemented selector on a
+    // legacy v1 helper, etc.) — without routing it back, the completion is
+    // silently dropped and the caller's continuation never runs. `XPCOnce`
+    // guards against the shared proxy's handler firing for more than one of the
+    // messages we send through it (e.g. setSMCPath + the actual call).
     public func protocolVersion(_ done: @escaping (Int) -> Void) {
-        guard let helper = self.helper(nil) else { done(0); return }
-        helper.protocolVersion(completion: done)
+        let once = XPCOnce(done)
+        guard let helper = self.helper(onError: { once.fire(0) }) else { return }
+        helper.protocolVersion { once.fire($0) }
     }
 
     public func setActiveProfileJSON(_ data: Data, _ done: @escaping (String?) -> Void) {
-        guard let helper = self.helper(nil) else { done("no connection"); return }
-        helper.setActiveProfileJSON(data, completion: done)
+        let once = XPCOnce(done)
+        guard let helper = self.helper(onError: { once.fire("no connection") }) else { return }
+        helper.setActiveProfileJSON(data) { once.fire($0) }
     }
 
     public func saveProfilesJSON(_ data: Data, _ done: @escaping (String?) -> Void) {
-        guard let helper = self.helper(nil) else { done("no connection"); return }
-        helper.saveProfilesJSON(data, completion: done)
+        let once = XPCOnce(done)
+        guard let helper = self.helper(onError: { once.fire("no connection") }) else { return }
+        helper.saveProfilesJSON(data) { once.fire($0) }
     }
 
     public func setOverride(rawMode: Int, fanId: Int, value: Int = 0, _ done: @escaping (String?) -> Void) {
-        guard let helper = self.helper(nil) else { done("no connection"); return }
-        helper.setOverride(rawMode: rawMode, fanId: fanId, value: value, completion: done)
+        let once = XPCOnce(done)
+        guard let helper = self.helper(onError: { once.fire("no connection") }) else { return }
+        helper.setOverride(rawMode: rawMode, fanId: fanId, value: value) { once.fire($0) }
     }
 
     public func getStatusJSON(_ done: @escaping (Data?) -> Void) {
-        guard let helper = self.helper(nil) else { done(nil); return }
-        helper.getStatusJSON(completion: done)
+        let once = XPCOnce(done)
+        guard let helper = self.helper(onError: { once.fire(nil) }) else { return }
+        helper.getStatusJSON { once.fire($0) }
     }
 
     public func setEnabled(_ enabled: Bool, _ done: @escaping (String?) -> Void) {
-        guard let helper = self.helper(nil) else { done("no connection"); return }
-        helper.setEnabled(enabled, completion: done)
+        let once = XPCOnce(done)
+        guard let helper = self.helper(onError: { once.fire("no connection") }) else { return }
+        helper.setEnabled(enabled) { once.fire($0) }
     }
     
     public func checkForUpdate() {
@@ -1122,10 +1136,48 @@ public class SMCHelper {
         }
         
         service.setSMCPath(Bundle.main.path(forResource: "smc", ofType: nil)!)
-        
+
         return service
     }
-    
+
+    /// Like `helper(_:)` but routes XPC transport errors to `onError` instead
+    /// of only printing them, so a caller waiting on the reply still completes
+    /// when the message can't be delivered.
+    private func helper(onError: @escaping () -> Void) -> HelperProtocol? {
+        guard let connection = self.helperConnection() else {
+            onError()
+            return nil
+        }
+        guard let service = connection.remoteObjectProxyWithErrorHandler({ error in
+            print(error)
+            onError()
+        }) as? HelperProtocol else {
+            onError()
+            return nil
+        }
+        service.setSMCPath(Bundle.main.path(forResource: "smc", ofType: nil)!)
+        return service
+    }
+
+    /// One-shot completion guard. NSXPC normally invokes either the reply OR
+    /// the error handler per message — but a dead connection fails every
+    /// message sent through a proxy (we send `setSMCPath` plus the real call),
+    /// so the shared error handler can fire more than once. This collapses to a
+    /// single delivery. Thread-safe: reply and error handler run on different
+    /// XPC queues.
+    private final class XPCOnce<T> {
+        private let lock = NSLock()
+        private var sink: ((T) -> Void)?
+        init(_ sink: @escaping (T) -> Void) { self.sink = sink }
+        func fire(_ value: T) {
+            lock.lock()
+            let s = self.sink
+            self.sink = nil
+            lock.unlock()
+            s?(value)
+        }
+    }
+
     public func uninstall(silent: Bool = false) {
         if let count = SMC.shared.getValue("FNum") {
             for i in 0..<Int(count) {

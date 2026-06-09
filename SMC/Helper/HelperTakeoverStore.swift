@@ -39,10 +39,15 @@ final class HelperTakeoverStore: TakeoverStore {
     func setUserTookOver(fan: Int) { setUserTakeover(fan: fan, value: true) }
 
     private func setUserTakeover(fan: Int, value: Bool) {
+        // Write while holding the lock so two concurrent setters can't reorder
+        // their file writes relative to their in-memory updates (last-writer-
+        // wins on the file would otherwise be able to persist a stale flag).
+        // Calls are rare (user picker actions), so file I/O under the lock is
+        // not a contention concern.
         lock.lock()
+        defer { lock.unlock() }
         state[fan] = value
         let snapshot = state.reduce(into: [String: Bool]()) { $0[String($1.key)] = $1.value }
-        lock.unlock()
         if let data = try? JSONEncoder().encode(snapshot) {
             try? data.write(to: Self.url, options: .atomic)
         }

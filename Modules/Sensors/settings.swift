@@ -32,6 +32,7 @@ internal class Settings: NSStackView, Settings_v {
     private var thresholdField: NSTextField?
     private var graphView: CurveGraphView?
     private var deleteBtn: NSButton?
+    private var resetBtn: NSButton?
 
     public var callback: (() -> Void) = {}
     public var HIDcallback: (() -> Void) = {}
@@ -296,9 +297,22 @@ internal class Settings: NSStackView, Settings_v {
         }
         self.deleteBtn = deleteBtn
         deleteBtn.isEnabled = !(ProfileStore.shared.activeProfile()?.isBuiltIn ?? true)
+
+        // Reset is the helpful counterpart to user edits on a built-in: if the
+        // user has tweaked Balanced (etc.) via persistCurveEdits / driver edits
+        // / advanced-field changes, this restores the factory values. Only
+        // enabled when the active profile's UUID matches a known built-in.
+        let resetBtn = NSButton(title: localizedString("Reset to defaults"),
+                                target: self,
+                                action: #selector(self.resetProfileToDefaults))
+        resetBtn.bezelStyle = .rounded
+        resetBtn.toolTip = localizedString("Restore the factory curve, drivers, offset, hysteresis and threshold for this built-in profile")
+        self.resetBtn = resetBtn
+        resetBtn.isEnabled = self.activeProfileIsBuiltIn()
+
         let spacer = NSView()
         spacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
-        let buttonRow = NSStackView(views: [deleteBtn, spacer, duplicateBtn])
+        let buttonRow = NSStackView(views: [resetBtn, spacer, deleteBtn, duplicateBtn])
         buttonRow.orientation = .horizontal
         buttonRow.spacing = 8
         let actionSection = PreferencesSection()
@@ -427,6 +441,23 @@ internal class Settings: NSStackView, Settings_v {
     /// a Settings-local popup since the active picker now lives in the menubar.
     private func reloadProfilePicker() {
         self.deleteBtn?.isEnabled = !(ProfileStore.shared.activeProfile()?.isBuiltIn ?? true)
+        self.resetBtn?.isEnabled = self.activeProfileIsBuiltIn()
+    }
+
+    /// True when the currently-active profile is a built-in whose name still
+    /// matches one of `FanProfile.builtIns(...)` — i.e. there exists a factory
+    /// default that `ProfileStore.resetToDefault` can restore the profile to.
+    /// Custom profiles and "(custom)" forks created by `persistCurveEdits`
+    /// (their `isBuiltIn` flag is cleared on fork) return false.
+    private func activeProfileIsBuiltIn() -> Bool {
+        guard let active = ProfileStore.shared.activeProfile(),
+              active.isBuiltIn else { return false }
+        let fans = self.list.compactMap({ $0 as? Fan })
+        let fanCount = max(1, fans.count)
+        let defaultMaxRPM = Int(fans.map(\.maxSpeed).max() ?? 7000)
+        let defaults = FanProfile.builtIns(fanCount: fanCount,
+                                           defaultMaxRPM: defaultMaxRPM)
+        return defaults.contains(where: { $0.id == active.id || $0.name == active.name })
     }
 
     /// Settings's editor edits the ACTIVE profile. Active is changed either
@@ -437,6 +468,7 @@ internal class Settings: NSStackView, Settings_v {
         self.refreshCurveEditor()
         self.reloadEditPicker()
         self.deleteBtn?.isEnabled = !(ProfileStore.shared.activeProfile()?.isBuiltIn ?? true)
+        self.resetBtn?.isEnabled = self.activeProfileIsBuiltIn()
     }
 
     private func refreshCurveEditor() {
@@ -607,6 +639,34 @@ internal class Settings: NSStackView, Settings_v {
         self.reloadProfilePicker()
         self.refreshCurveEditor()
         NotificationCenter.default.post(name: .fanProfileChanged, object: nil)
+    }
+
+    /// "Reset to defaults" action — restores the active built-in profile to
+    /// its factory points / drivers / offset / hysteresis / threshold while
+    /// preserving its UUID and current name. Confirmation alert first because
+    /// reset is destructive of any user edits.
+    @objc private func resetProfileToDefaults() {
+        guard let active = ProfileStore.shared.activeProfile() else { return }
+        guard self.activeProfileIsBuiltIn() else { return }
+
+        let alert = NSAlert()
+        alert.messageText = localizedString("Reset profile to defaults?")
+        alert.informativeText = localizedString("This restores the factory curve, drivers, offset, hysteresis and ΔRPM threshold for this built-in profile. The profile name is preserved.")
+        alert.addButton(withTitle: localizedString("Reset"))
+        alert.addButton(withTitle: localizedString("Cancel"))
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+
+        let fans = self.list.compactMap({ $0 as? Fan })
+        let fanCount = max(1, fans.count)
+        let defaultMaxRPM = Int(fans.map(\.maxSpeed).max() ?? 7000)
+        let ok = ProfileStore.shared.resetToDefault(active.id,
+                                                    fanCount: fanCount,
+                                                    defaultMaxRPM: defaultMaxRPM)
+        if !ok {
+            error("resetToDefault failed: profile is not a built-in")
+        }
+        // ProfileStore.resetToDefault already posts .fanProfileChanged →
+        // activeProfileChangedExternally refreshes the editor.
     }
 
     @objc private func deleteProfile() {

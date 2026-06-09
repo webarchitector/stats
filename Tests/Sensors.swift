@@ -689,6 +689,49 @@ final class SensorsTests: XCTestCase {
         clearProfileStore()
     }
 
+    // MARK: - resetToDefault
+
+    func testProfileStore_resetToDefault_restoresBuiltInValues() {
+        clearProfileStore()
+        let store = ProfileStore.shared
+        store.bootstrapIfNeeded(fanCount: 1, defaultMaxRPM: 7000)
+        let balancedID = store.loadProfiles().first(where: { $0.name == "Balanced" })!.id
+
+        // User edits Balanced — overwrite its points with garbage.
+        var all = store.loadProfiles()
+        if let idx = all.firstIndex(where: { $0.id == balancedID }) {
+            all[idx] = FanProfile(
+                id: all[idx].id, name: all[idx].name, isBuiltIn: all[idx].isBuiltIn,
+                drivers: [], points: [CurvePoint(tempC: 0, rpm: 999)],
+                fanOffsetRPM: 0, hysteresisC: 0, deltaRpmThreshold: 0
+            )
+            store.saveProfiles(all)
+        }
+        XCTAssertEqual(store.loadProfiles().first(where: { $0.id == balancedID })?.points.count, 1,
+                       "precondition: corrupted Balanced has 1 garbage point")
+
+        let ok = store.resetToDefault(balancedID, fanCount: 1, defaultMaxRPM: 7000)
+        XCTAssertTrue(ok, "reset must succeed for a built-in id")
+        let restored = store.loadProfiles().first(where: { $0.id == balancedID })!
+        XCTAssertGreaterThan(restored.points.count, 1,
+                             "Balanced default has multiple curve points")
+        XCTAssertFalse(restored.drivers.isEmpty,
+                       "Balanced default has driver sensors")
+        XCTAssertEqual(restored.fanOffsetRPM, 50, "factory offset restored")
+        XCTAssertEqual(restored.id, balancedID, "id must be preserved")
+        clearProfileStore()
+    }
+
+    func testProfileStore_resetToDefault_returnsFalseForCustom() {
+        clearProfileStore()
+        let store = ProfileStore.shared
+        store.bootstrapIfNeeded(fanCount: 1, defaultMaxRPM: 7000)
+        let custom = store.createCustomProfile(fanCount: 1, defaultMaxRPM: 7000)
+        let ok = store.resetToDefault(custom.id, fanCount: 1, defaultMaxRPM: 7000)
+        XCTAssertFalse(ok, "custom profile has no built-in default to reset to")
+        clearProfileStore()
+    }
+
     // MARK: - FakeFanCurveHelper baseline
 
     func testFakeHelper_recordsSetFanModeCalls() {

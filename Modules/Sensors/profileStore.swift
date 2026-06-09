@@ -142,6 +142,54 @@ public final class ProfileStore {
         return fresh
     }
 
+    /// Restore the profile with `id` to its built-in factory defaults. Returns
+    /// true if the stored profile is a built-in whose name matches one of
+    /// `FanProfile.builtIns(...)` (Apple Auto / Quiet / Linear / Balanced /
+    /// Aggressive / Performance) and the reset was performed, false otherwise
+    /// (id missing, not built-in, or name doesn't match a known template).
+    ///
+    /// Matching is by `isBuiltIn` + name because `FanProfile.builtIns(...)`
+    /// generates fresh UUIDs every call (only Apple Auto has a stable UUID via
+    /// `appleAutoID`). Names within the built-in set are unique.
+    ///
+    /// The stored profile's `name` and `id` are preserved (user-rename
+    /// respected, UUID stable so active-profile selection survives); every
+    /// other field (points, drivers, fanOffsetRPM, hysteresisC,
+    /// deltaRpmThreshold, isBuiltIn) is replaced with the factory value.
+    /// Posts `.fanProfileChanged` so the editor and popup reload.
+    @discardableResult
+    public func resetToDefault(_ id: UUID,
+                               fanCount: Int = 1,
+                               defaultMaxRPM: Int = 7000) -> Bool {
+        var all = self.loadProfiles()
+        guard let idx = all.firstIndex(where: { $0.id == id }) else {
+            return false
+        }
+        let existing = all[idx]
+        guard existing.isBuiltIn else { return false }
+        let defaults = FanProfile.builtIns(fanCount: fanCount,
+                                           defaultMaxRPM: defaultMaxRPM)
+        // Apple Auto has a stable UUID — match by id first for it; the rest
+        // match by name (unique within built-ins).
+        let template = defaults.first(where: { $0.id == id })
+            ?? defaults.first(where: { $0.name == existing.name })
+        guard let template else { return false }
+        let reset = FanProfile(
+            id: existing.id,
+            name: existing.name,
+            isBuiltIn: template.isBuiltIn,
+            drivers: template.drivers,
+            points: template.points,
+            fanOffsetRPM: template.fanOffsetRPM,
+            hysteresisC: template.hysteresisC,
+            deltaRpmThreshold: template.deltaRpmThreshold
+        )
+        all[idx] = reset
+        self.saveProfiles(all)
+        NotificationCenter.default.post(name: .fanProfileChanged, object: nil)
+        return true
+    }
+
     @discardableResult
     public func duplicateProfile(_ source: FanProfile,
                                  fanCount: Int = 1,

@@ -21,6 +21,7 @@ internal class Settings: NSStackView, Settings_v {
     private var fanValueState: FanValue = .percentage
     private var fanCurveContainer: NSStackView?
     private var profilePopup: NSPopUpButton?
+    private var editPicker: NSPopUpButton?
     private var pointsTable: NSTableView?
     private let pointsDataSource = CurvePointsTable()
     private var driversTable: NSTableView?
@@ -120,6 +121,34 @@ internal class Settings: NSStackView, Settings_v {
         NotificationCenter.default.addObserver(self,
             selector: #selector(self.activeProfileChangedExternally),
             name: .fanProfileChanged, object: nil)
+
+        // ─── Profile picker + "+ New" button (top of the editor) ───
+        // Discoverable entry point for profile management. Picking switches
+        // the active profile (same semantics as the menubar popup picker);
+        // "+ New" seeds a fresh "Custom N" from Balanced and activates it.
+        let editLabel = NSTextField(labelWithString: localizedString("Edit profile:"))
+        let picker = NSPopUpButton(frame: .zero, pullsDown: false)
+        picker.target = self
+        picker.action = #selector(self.editPickerChanged(_:))
+        self.editPicker = picker
+
+        let newBtn = NSButton(title: "+ " + localizedString("New profile"),
+                              target: self,
+                              action: #selector(self.newProfile))
+        newBtn.bezelStyle = .rounded
+        newBtn.controlSize = .small
+        newBtn.toolTip = localizedString("Create a new profile from Balanced and switch to it")
+
+        let pickerSpacer = NSView()
+        pickerSpacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        let editPickerRow = NSStackView(views: [editLabel, picker, newBtn, pickerSpacer])
+        editPickerRow.orientation = .horizontal
+        editPickerRow.alignment = .centerY
+        editPickerRow.spacing = 8
+
+        let editPickerSection = PreferencesSection()
+        editPickerSection.add(PreferencesRow(nil, component: editPickerRow))
+        curveContainer.addArrangedSubview(editPickerSection)
 
         // ─── Graph (visual anchor — sized so the curve is readable at a glance) ───
         let graph = CurveGraphView()
@@ -400,10 +429,13 @@ internal class Settings: NSStackView, Settings_v {
         self.deleteBtn?.isEnabled = !(ProfileStore.shared.activeProfile()?.isBuiltIn ?? true)
     }
 
-    /// Settings's editor always edits the ACTIVE profile (selected from the popup
-    /// in the menubar). When the popup selection changes, refresh the editor.
+    /// Settings's editor edits the ACTIVE profile. Active is changed either
+    /// from the menubar popup (`ModeButtons`) or from the in-Settings edit
+    /// picker. Both paths post `.fanProfileChanged`; this observer refreshes
+    /// the editor + the picker selection in lock-step.
     @objc private func activeProfileChangedExternally() {
         self.refreshCurveEditor()
+        self.reloadEditPicker()
         self.deleteBtn?.isEnabled = !(ProfileStore.shared.activeProfile()?.isBuiltIn ?? true)
     }
 
@@ -415,6 +447,47 @@ internal class Settings: NSStackView, Settings_v {
         self.graphView?.points = pts
         let maxRpm = Int(self.list.compactMap({ $0 as? Fan }).map(\.maxSpeed).max() ?? 7000)
         self.graphView?.maxRPM = maxRpm
+        // Mirror Advanced text fields to the new active profile.
+        let active = ProfileStore.shared.activeProfile()
+        self.offsetField?.stringValue = String(active?.fanOffsetRPM ?? 50)
+        self.hysteresisField?.stringValue = String(active?.hysteresisC ?? 2.0)
+        self.thresholdField?.stringValue = String(active?.deltaRpmThreshold ?? 150)
+        self.reloadEditPicker()
+    }
+
+    /// Rebuild the in-Settings profile picker. Each item carries the profile
+    /// UUID via `representedObject`; the currently active profile is selected.
+    private func reloadEditPicker() {
+        guard let picker = self.editPicker else { return }
+        picker.removeAllItems()
+        let profiles = ProfileStore.shared.loadProfiles()
+        let activeID = ProfileStore.shared.activeProfileID
+        for p in profiles {
+            picker.addItem(withTitle: p.name)
+            picker.lastItem?.representedObject = p.id
+            if p.id == activeID { picker.select(picker.lastItem) }
+        }
+    }
+
+    @objc private func editPickerChanged(_ sender: NSPopUpButton) {
+        guard let uuid = sender.selectedItem?.representedObject as? UUID,
+              uuid != ProfileStore.shared.activeProfileID else { return }
+        // Same semantics as the menubar popup-picker switching profile.
+        ProfileStore.shared.activeProfileID = uuid
+        NotificationCenter.default.post(name: .fanProfileChanged, object: nil)
+    }
+
+    /// "+ New" button — creates a fresh editable "Custom N" profile seeded
+    /// with Balanced's curve + drivers and activates it. The
+    /// `.fanProfileChanged` post triggers the editor reload + menubar popup
+    /// refresh.
+    @objc private func newProfile() {
+        let fans = self.list.compactMap({ $0 as? Fan })
+        let fanCount = max(1, fans.count)
+        let defaultMaxRPM = Int(fans.map(\.maxSpeed).max() ?? 7000)
+        _ = ProfileStore.shared.createCustomProfile(fanCount: fanCount,
+                                                    defaultMaxRPM: defaultMaxRPM)
+        NotificationCenter.default.post(name: .fanProfileChanged, object: nil)
     }
 
     private func refreshDriversChecklist() {

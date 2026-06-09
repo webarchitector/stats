@@ -90,6 +90,58 @@ public final class ProfileStore {
     /// profile to start from, which is hostile. Instead, when the source has
     /// no points we seed from the built-in Balanced profile so the user has
     /// a sensible curve to tweak. Drivers follow the same fallback.
+    /// Creates a brand new editable profile seeded from the built-in Balanced
+    /// curve (or the first non-empty profile if Balanced is missing), assigns
+    /// a unique "Custom N" name, persists it, and makes it active.
+    ///
+    /// Used by the in-Settings "+ New profile" affordance. Returns the freshly
+    /// created profile.
+    @discardableResult
+    public func createCustomProfile(fanCount: Int = 1,
+                                    defaultMaxRPM: Int = 7000) -> FanProfile {
+        let existing = self.loadProfiles()
+        let builtIns = FanProfile.builtIns(fanCount: fanCount,
+                                           defaultMaxRPM: defaultMaxRPM)
+        let template = existing.first(where: { $0.name == "Balanced" })
+            ?? existing.first(where: { !$0.points.isEmpty })
+            ?? builtIns.first(where: { $0.name == "Balanced" })
+            ?? builtIns.first
+        guard let src = template else {
+            // No template anywhere — return a minimal placeholder so the
+            // caller doesn't crash on an Optional unwrap. Realistically
+            // unreachable because builtIns is non-empty by construction.
+            let placeholder = FanProfile(name: "Custom 1",
+                                         drivers: [],
+                                         points: [])
+            var profiles = existing
+            profiles.append(placeholder)
+            self.saveProfiles(profiles)
+            self.activeProfileID = placeholder.id
+            return placeholder
+        }
+
+        let names = Set(existing.map(\.name))
+        var n = 1
+        var name = "Custom \(n)"
+        while names.contains(name) { n += 1; name = "Custom \(n)" }
+
+        let fresh = FanProfile(
+            id: UUID(),
+            name: name,
+            isBuiltIn: false,
+            drivers: src.drivers,
+            points: src.points,
+            fanOffsetRPM: src.fanOffsetRPM,
+            hysteresisC: src.hysteresisC,
+            deltaRpmThreshold: src.deltaRpmThreshold
+        )
+        var profiles = existing
+        profiles.append(fresh)
+        self.saveProfiles(profiles)
+        self.activeProfileID = fresh.id
+        return fresh
+    }
+
     @discardableResult
     public func duplicateProfile(_ source: FanProfile,
                                  fanCount: Int = 1,

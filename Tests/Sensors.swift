@@ -653,6 +653,42 @@ final class SensorsTests: XCTestCase {
         clearProfileStore()
     }
 
+    // MARK: - createCustomProfile (in-Settings "+ New profile")
+
+    func testProfileStore_createCustomProfile_seedsFromBalancedAndActivates() {
+        clearProfileStore()
+        let store = ProfileStore.shared
+        store.bootstrapIfNeeded(fanCount: 1, defaultMaxRPM: 7000)
+        let balanced = store.loadProfiles().first(where: { $0.name == "Balanced" })!
+
+        let fresh = store.createCustomProfile(fanCount: 1, defaultMaxRPM: 7000)
+
+        XCTAssertEqual(fresh.name, "Custom 1", "first invocation should be Custom 1")
+        XCTAssertFalse(fresh.isBuiltIn, "new profile must be editable")
+        XCTAssertEqual(fresh.points, balanced.points, "seeded from Balanced curve")
+        XCTAssertEqual(fresh.drivers, balanced.drivers, "seeded from Balanced drivers")
+        XCTAssertEqual(store.activeProfileID, fresh.id, "fresh profile should become active")
+        XCTAssertTrue(store.loadProfiles().contains(where: { $0.id == fresh.id }), "must be persisted")
+        clearProfileStore()
+    }
+
+    func testProfileStore_createCustomProfile_pickFreshNameWhenCollision() {
+        clearProfileStore()
+        let store = ProfileStore.shared
+        store.bootstrapIfNeeded(fanCount: 1, defaultMaxRPM: 7000)
+
+        let first = store.createCustomProfile(fanCount: 1, defaultMaxRPM: 7000)
+        let second = store.createCustomProfile(fanCount: 1, defaultMaxRPM: 7000)
+        let third = store.createCustomProfile(fanCount: 1, defaultMaxRPM: 7000)
+
+        XCTAssertEqual(first.name, "Custom 1")
+        XCTAssertEqual(second.name, "Custom 2")
+        XCTAssertEqual(third.name, "Custom 3")
+        XCTAssertNotEqual(first.id, second.id)
+        XCTAssertNotEqual(second.id, third.id)
+        clearProfileStore()
+    }
+
     // MARK: - FakeFanCurveHelper baseline
 
     func testFakeHelper_recordsSetFanModeCalls() {

@@ -486,6 +486,12 @@ public class SMC {
     }
     
     public func setFanSpeed(_ id: Int, speed: Int) {
+        // Clamp the lower bound: a negative speed would hit `UInt8(speed >> 6)`
+        // on `fpe2` fans below and trap (negative → UInt8), crashing the
+        // caller. 0 is the valid floor ("Off"); anything below is bogus.
+        if speed < 0 {
+            return setFanSpeed(id, speed: 0)
+        }
         if let maxSpeed = self.getValue("F\(id)Mx"),
            speed > Int(maxSpeed) {
             return setFanSpeed(id, speed: Int(maxSpeed))

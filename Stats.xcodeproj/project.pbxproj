@@ -17,7 +17,10 @@
 		3E30EBEA6571A144B86A7F95 /* FanCoreClock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 651D920E612C9B81D8586E18 /* FanCoreClock.swift */; };
 		421C47D22F2AD502B353402F /* Sensors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58091506F3B289B231B39FE3 /* Sensors.swift */; };
 		479B2E3E389D636431E0E9C5 /* profileStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3322981FB4165F78DFD82B5 /* profileStore.swift */; };
+		537BB621595CCECC78F68DF4 /* DaemonRunloop.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6E2A7DEEB181E68A93E3562 /* DaemonRunloop.swift */; };
+		54A6B6CB78530916D5CC3BD7 /* PersistentProfileStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2D6A7FAB10C390CFEA19D20 /* PersistentProfileStore.swift */; };
 		5516AB03BA1659400C1FA207 /* Types.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21C37A02904455D7F1D83D7F /* Types.swift */; };
+		5ADB4353A6A72AF58CAD430E /* HelperLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6E10EFC50ABBE39899C7453 /* HelperLogger.swift */; };
 		5C044F7A2B3DE6F3005F6951 /* portal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C044F792B3DE6F3005F6951 /* portal.swift */; };
 		5C0A2A8A292A5B4D009B4C1F /* SMJobBlessUtil.py in Resources */ = {isa = PBXBuildFile; fileRef = 5C0A2A89292A5B4D009B4C1F /* SMJobBlessUtil.py */; };
 		5C0A9CA22C467AA300EE6A89 /* widget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C0A9CA12C467AA300EE6A89 /* widget.swift */; };
@@ -179,6 +182,7 @@
 		A4F5347947AD4C4D6021A568 /* Stack.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3AAC1FE992EE74A4AE15281 /* Stack.swift */; };
 		A61A66C291037E234D383AF5 /* Types.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21C37A02904455D7F1D83D7F /* Types.swift */; };
 		AA00000000000000000000A1 /* libIOReport.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C1E45552D11D66200525864 /* libIOReport.tbd */; };
+		AD7D8113A06B965F31684A28 /* HelperTakeoverStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFB37A41ACF874110FE81D94 /* HelperTakeoverStore.swift */; };
 		B638E3A8E4823AF6F78D09CF /* EngineSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 619C200D4214A6C5029445FC /* EngineSnapshot.swift */; };
 		B85DB7409048525C8583C63B /* fanCurve.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5953BDA1E924935D3DB7E8B7 /* fanCurve.swift */; };
 		BC91E674D2BAE80724B42CC2 /* FanCurveHelperProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19B9C2E6ADF95B22763070DD /* FanCurveHelperProtocol.swift */; };
@@ -614,6 +618,7 @@
 		9AF9EE192464A7B3005D2270 /* config.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = config.plist; sourceTree = "<group>"; };
 		9B0653237E4E1A476F89E190 /* LineChart.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LineChart.swift; sourceTree = "<group>"; };
 		9DE8F91C37CE003CC79E988C /* BarChart.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BarChart.swift; sourceTree = "<group>"; };
+		A6E2A7DEEB181E68A93E3562 /* DaemonRunloop.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DaemonRunloop.swift; sourceTree = "<group>"; };
 		A86D42398106E8F1C39B9671 /* FanSnapshot.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FanSnapshot.swift; path = FanSnapshot.swift; sourceTree = "<group>"; };
 		ABF31774E50A0093CC9A7000 /* fanController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = fanController.swift; path = Modules/Sensors/fanController.swift; sourceTree = SOURCE_ROOT; };
 		B2E0CF1B7DCD5E022571C876 /* curveGraph.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = curveGraph.swift; path = Modules/Sensors/curveGraph.swift; sourceTree = SOURCE_ROOT; };
@@ -627,13 +632,16 @@
 		CBF35F8F258CF80000B2BA41 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/Localizable.strings; sourceTree = "<group>"; };
 		CE47845D298F55F900F564FD /* th */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = th; path = th.lproj/Localizable.strings; sourceTree = "<group>"; };
 		D739B04177BE38871CEABEE5 /* HelperSensorReader.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HelperSensorReader.swift; sourceTree = "<group>"; };
+		E2D6A7FAB10C390CFEA19D20 /* PersistentProfileStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PersistentProfileStore.swift; sourceTree = "<group>"; };
 		E3322981FB4165F78DFD82B5 /* profileStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = profileStore.swift; path = Modules/Sensors/profileStore.swift; sourceTree = SOURCE_ROOT; };
 		E9E78DB64673E0C9EEC4D027 /* Mini.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Mini.swift; sourceTree = "<group>"; };
 		F3D59E2F2D189F00156F3877 /* Sensor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = Sensor.swift; path = Sensor.swift; sourceTree = "<group>"; };
 		F56847BCF776C6AC31EDB3B9 /* bridge.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = bridge.h; sourceTree = "<group>"; };
+		F6E10EFC50ABBE39899C7453 /* HelperLogger.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HelperLogger.swift; sourceTree = "<group>"; };
 		F8A38F83253303A8006D4D81 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/Localizable.strings; sourceTree = "<group>"; };
 		FCBD9253255C7D9900E1621A /* pt-BR */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "pt-BR"; path = "pt-BR.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		FF6E641C66683469A3CAED4C /* PieChart.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PieChart.swift; sourceTree = "<group>"; };
+		FFB37A41ACF874110FE81D94 /* HelperTakeoverStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HelperTakeoverStore.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -785,6 +793,10 @@
 				74618DB52EA980FA2009F8F9 /* reader.m */,
 				D739B04177BE38871CEABEE5 /* HelperSensorReader.swift */,
 				69ED90F295E389468A7FBB25 /* SMCFanWriter.swift */,
+				E2D6A7FAB10C390CFEA19D20 /* PersistentProfileStore.swift */,
+				FFB37A41ACF874110FE81D94 /* HelperTakeoverStore.swift */,
+				F6E10EFC50ABBE39899C7453 /* HelperLogger.swift */,
+				A6E2A7DEEB181E68A93E3562 /* DaemonRunloop.swift */,
 			);
 			path = Helper;
 			sourceTree = "<group>";
@@ -1796,6 +1808,10 @@
 				63A3DA9E87B4AD854A59E1D5 /* Sensor.swift in Sources */,
 				DD160F476D5E23F34F3D3398 /* TakeoverStore.swift in Sources */,
 				A61A66C291037E234D383AF5 /* Types.swift in Sources */,
+				54A6B6CB78530916D5CC3BD7 /* PersistentProfileStore.swift in Sources */,
+				AD7D8113A06B965F31684A28 /* HelperTakeoverStore.swift in Sources */,
+				5ADB4353A6A72AF58CAD430E /* HelperLogger.swift in Sources */,
+				537BB621595CCECC78F68DF4 /* DaemonRunloop.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

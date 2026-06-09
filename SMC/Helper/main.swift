@@ -17,19 +17,28 @@ helper.run()
 class Helper: NSObject, NSXPCListenerDelegate, HelperProtocol {
     private let listener: NSXPCListener
     private let smcQueue = DispatchQueue(label: "eu.exelban.Stats.SMC.Helper.smcQueue")
-    
+
     private var connections = [NSXPCConnection]()
-    private var shouldQuit = false
-    private var shouldQuitCheckInterval = 1.0
-    
+
     private var smc: String? = nil
-    
+
+    // Phase 3: helper owns the engine. These are held in strong references for
+    // the lifetime of the daemon process so the DispatchSourceTimer inside
+    // `runloop` keeps firing. launchd's KeepAlive flag restarts us on crash.
+    private var profileStore: PersistentProfileStore?
+    private var takeoverStore: HelperTakeoverStore?
+    private var helperLogger: HelperLogger?
+    private var fanWriter: SMCFanWriter?
+    private var sensorReader: HelperSensorReader?
+    private var engine: FanCurveEngine?
+    private var runloop: DaemonRunloop?
+
     override init() {
         self.listener = NSXPCListener(machServiceName: "eu.exelban.Stats.SMC.Helper")
         super.init()
         self.listener.delegate = self
     }
-    
+
     public func run() {
         let args = CommandLine.arguments.dropFirst()
         if !args.isEmpty && args.first == "uninstall" {
@@ -42,13 +51,36 @@ class Helper: NSObject, NSXPCListenerDelegate, HelperProtocol {
             self.uninstallHelper()
             exit(0)
         }
-        
+
         self.listener.resume()
-        while !self.shouldQuit {
-            RunLoop.current.run(until: Date(timeIntervalSinceNow: self.shouldQuitCheckInterval))
-        }
+        self.bootEngine()
+        // No `shouldQuit` flag — the daemon stays alive after Stats.app
+        // disconnects so the curve keeps running. launchd KeepAlive will
+        // restart us on crash; explicit termination only via `uninstall`.
+        RunLoop.current.run()
     }
-    
+
+    private func bootEngine() {
+        let store = PersistentProfileStore()
+        let takeover = HelperTakeoverStore()
+        let logger = HelperLogger()
+        let writer = SMCFanWriter()
+        let reader = HelperSensorReader()
+        let clock = SystemFanCoreClock()
+        let engine = FanCurveEngine(helper: writer, takeover: takeover, clock: clock, logger: logger)
+        let runloop = DaemonRunloop(reader: reader, engine: engine, store: store, logger: logger)
+
+        self.profileStore = store
+        self.takeoverStore = takeover
+        self.helperLogger = logger
+        self.fanWriter = writer
+        self.sensorReader = reader
+        self.engine = engine
+        self.runloop = runloop
+
+        runloop.start()
+    }
+
     func listener(_ listener: NSXPCListener, shouldAcceptNewConnection newConnection: NSXPCConnection) -> Bool {
         do {
             let isValid = try CodesignCheck.codeSigningMatches(pid: newConnection.processIdentifier)
@@ -60,21 +92,22 @@ class Helper: NSObject, NSXPCListenerDelegate, HelperProtocol {
             NSLog("error checking code signing: \(error)")
             return false
         }
-        
+
         newConnection.exportedInterface = NSXPCInterface(with: HelperProtocol.self)
         newConnection.exportedObject = self
-        newConnection.invalidationHandler = {
+        newConnection.invalidationHandler = { [weak self] in
+            guard let self = self else { return }
             if let connectionIndex = self.connections.firstIndex(of: newConnection) {
                 self.connections.remove(at: connectionIndex)
             }
-            if self.connections.isEmpty {
-                self.shouldQuit = true
-            }
+            // Do NOT quit when the last connection drops — the daemon
+            // outlives Stats.app so the curve keeps applying. launchd
+            // re-spawns on crash; explicit teardown is uninstall-only.
         }
-        
+
         self.connections.append(newConnection)
         newConnection.resume()
-        
+
         return true
     }
     
@@ -110,6 +143,12 @@ class Helper: NSObject, NSXPCListenerDelegate, HelperProtocol {
 extension Helper {
     func version(completion: (String) -> Void) {
         completion(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0")
+    }
+    func protocolVersion(completion: (Int) -> Void) {
+        // Bumped to 2 in Phase 3: daemon owns engine + tick loop. Phase 4 adds
+        // the full new XPC surface (profile push, takeover sync, etc.) and
+        // will bump again.
+        completion(2)
     }
     func setSMCPath(_ path: String) {
         self.smc = path

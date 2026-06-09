@@ -110,6 +110,13 @@ public final class FanCurveController {
     /// can crash or corrupt without this lock.
     private let stateLock = NSLock()
 
+    /// Last snapshot processed by tick(). Cached so the `.fanProfileChanged`
+    /// observer can synchronously re-tick on user picker action instead of
+    /// waiting up to ~1s for the next reader tick — eliminates the perceived
+    /// lag between selecting a profile and SMC actually receiving the new
+    /// curve. nil until the first non-sleeping, non-nil tick.
+    private var lastSnapshot: Sensors_List? = nil
+
     public init(helper: FanCurveHelper, store: ProfileStore,
                 clock: FanControllerClock = SystemFanControllerClock()) {
         self.helper = helper
@@ -131,12 +138,9 @@ public final class FanCurveController {
             forName: .fanProfileChanged, object: nil, queue: .main) { [weak self] _ in
             guard let self = self else { return }
             self.stateLock.lock()
-            // Force next tick to re-assert setFanMode(.forced) for each fan.
-            // Without clearing managedFans, the next applyIfNeeded skips the
-            // mode write and leaves SMC briefly in whatever mode the user's
-            // callback (.automatic) just set — out of sync until next speed
-            // write self-heals it via SMC's unlockFanControl path.
-            self.managedFans.removeAll()
+            // Clear per-tick smoothing/hysteresis state so the new profile's
+            // first decision isn't biased by stale samples or the prior
+            // profile's lastApplied/lastTempForHyst values.
             self.lastApplied.removeAll()
             self.lastTempForHyst.removeAll()
             self.tempSamples.removeAll()
@@ -144,9 +148,38 @@ public final class FanCurveController {
             // User-initiated profile change implies fresh intent — drop any
             // Apple-override quarantine so newly-relevant fans get retried.
             self.appleOverridden.removeAll()
-            self.lastSetMode.removeAll()
             self.overrideStreak.removeAll()
+
+            let newProfileIsApple = (self.store.activeProfile()?.points.isEmpty ?? true)
+            let snapshot = self.lastSnapshot
+
+            if newProfileIsApple {
+                // Apple Auto / no curve. relinquishLocked iterates the
+                // still-populated managedFans set and writes .automatic to SMC
+                // for each fan we own (skipping fans whose Store key marks user
+                // takeover — Manual/Off/Max from popup). It also clears
+                // managedFans, lastSetMode, and overrideStreak at the end.
+                // CRITICAL: this MUST run before any managedFans.removeAll() —
+                // otherwise the iteration is over an empty set and fans stay
+                // stuck in .forced mode forever.
+                self.relinquishLocked()
+            } else {
+                // Non-Apple profile. Clear managedFans + lastSetMode so the
+                // immediate re-tick below re-asserts setFanMode(.forced) for
+                // each fan and writes the new profile's curve to SMC.
+                self.managedFans.removeAll()
+                self.lastSetMode.removeAll()
+            }
             self.stateLock.unlock()
+
+            // Synchronously apply the new non-Apple profile in this call —
+            // eliminates ~1s lag waiting for the next reader tick. tick()
+            // re-acquires stateLock so the brief unlock/relock here is fine.
+            // Skip when activeProfile is empty (Apple Auto): tick() would just
+            // call relinquishLocked again, which we already did above.
+            if !newProfileIsApple, let snapshot = snapshot {
+                self.tick(snapshot: snapshot)
+            }
         }))
     }
 
@@ -181,6 +214,10 @@ public final class FanCurveController {
         defer { stateLock.unlock() }
 
         guard !isAsleep, let snapshot = snapshot else { return }
+        // Cache the most recent valid snapshot so the .fanProfileChanged
+        // observer can synchronously re-tick on user picker action without
+        // waiting for the next reader tick.
+        lastSnapshot = snapshot
 
         // If the helper went away mid-session (user uninstalled it, the
         // launchd daemon crashed, file deleted), our cached managedFans set

@@ -1260,19 +1260,26 @@ final class SensorsTests: XCTestCase {
         let clock = FakeFanControllerClock()
         let c = FanCurveController(helper: fake, store: store, clock: clock)
         let fan = makeControllerFan(id: 0)
-        // Stack three samples (would median to 60 → 4000 with +500 derivative)
+        // Stack two samples (would median to 75 → 5500 with +500 derivative
+        // bonus on the next 60°C tick if state weren't reset).
         tickAt(c, clock: clock, fake: fake, advance: 0,
                fans: [fan], temps: [("TC0D", 50)])
         tickAt(c, clock: clock, fake: fake, advance: 1,
                fans: [fan], temps: [("TC0D", 100)])
-        // Profile-change observer wipes tempSamples + batteryHotSince
+        // Profile-change observer wipes tempSamples + batteryHotSince, then
+        // synchronously re-ticks with the cached snapshot (temp=100) — that
+        // re-tick adds one fresh sample [(100)]. Advance the clock past the
+        // sample window (5s) so that sample is pruned before our final tick,
+        // isolating "samples must be reset" from immediate-apply behavior.
         NotificationCenter.default.post(name: .fanProfileChanged, object: nil)
         // Let main-queue async observer block drain
         RunLoop.main.run(until: Date().addingTimeInterval(0.05))
         fake.reset()
-        // Next tick is effectively first-of-session: 60°C → curve = 4000,
-        // derivative = 0 (only one sample), no bonus.
-        tickAt(c, clock: clock, fake: fake, advance: 1,
+        // Advance > sample window (5s) to prune the observer's re-tick sample.
+        // Then next tick is effectively first-of-session: 60°C → curve = 4000,
+        // derivative = 0 (only one sample), no bonus. If pre-notification
+        // samples (50, 100) had leaked through, median would be wrong.
+        tickAt(c, clock: clock, fake: fake, advance: 6,
                fans: [fan], temps: [("TC0D", 60)])
         XCTAssertEqual(fake.speedCalls.last?.rpm, 4000,
                        "samples must be reset on profile change")
@@ -1589,6 +1596,88 @@ final class SensorsTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(fake2.speedCalls.count, 1,
             "fresh controller must write speed under same conditions")
         _ = c1
+        clearProfileStore()
+    }
+
+    // MARK: - Immediate profile-change application
+
+    /// Picker → non-Apple profile must hit SMC synchronously inside the
+    /// notification observer (no waiting up to ~1s for the next reader tick).
+    /// Setup starts on Apple Auto so the first tick produces no SMC writes;
+    /// after resetting the fake we swap to a non-Apple profile and post the
+    /// notification — `.forced` mode + a speed write must appear without
+    /// calling `tick()` again.
+    func testController_profileChange_appliesImmediately_withoutWaitingForTick() {
+        clearProfileStore()
+        let store = ProfileStore()
+        let apple = FanProfile(id: FanProfile.appleAutoID, name: "Apple Auto",
+            drivers: [DriverSensor(key: "TC0D")], points: [],
+            fanOffsetRPM: 0, hysteresisC: 0, deltaRpmThreshold: 1)
+        let custom = FanProfile(name: "Custom",
+            drivers: [DriverSensor(key: "TC0D")],
+            points: [CurvePoint(tempC: 30, rpm: 1000), CurvePoint(tempC: 80, rpm: 6000)],
+            fanOffsetRPM: 0, hysteresisC: 0, deltaRpmThreshold: 1)
+        store.saveProfiles([apple, custom])
+        store.activeProfileID = apple.id
+        let fake = FakeFanCurveHelper()
+        let c = FanCurveController(helper: fake, store: store)
+        // First tick caches lastSnapshot. Apple Auto has empty points →
+        // controller relinquishes (managedFans was empty, so no SMC writes).
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0)], temps: [("TC0D", 60)]))
+        fake.reset()
+        // User picks the custom profile in the popup. Active profile is the
+        // non-empty one; observer must re-tick synchronously.
+        store.activeProfileID = custom.id
+        NotificationCenter.default.post(name: .fanProfileChanged, object: nil)
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.05))
+        // SMC writes must be visible BEFORE the next explicit tick() call.
+        XCTAssertTrue(fake.modeCalls.contains(.init(id: 0, mode: FanMode.forced.rawValue)),
+            "profile change to non-Apple must immediately re-assert .forced on SMC")
+        XCTAssertFalse(fake.speedCalls.isEmpty,
+            "profile change to non-Apple must immediately write the new curve's RPM (got: \(fake.speedCalls))")
+        XCTAssertEqual(fake.speedCalls.first?.id, 0)
+        XCTAssertEqual(fake.speedCalls.first?.rpm, 4000,
+            "first immediate write at temp=60 on linear curve (30,1000)-(80,6000) must be 4000")
+        _ = c
+        clearProfileStore()
+    }
+
+    /// Picker → Apple Auto must relinquish the previously-managed fan
+    /// synchronously — `.automatic` write to SMC inside the observer, no
+    /// reliance on the next tick. Regression guard for the latent bug where
+    /// `managedFans.removeAll()` ran BEFORE `relinquishLocked`, leaving fans
+    /// stuck in `.forced` mode forever.
+    func testController_switchToAppleAuto_immediatelyRelinquishes() {
+        clearProfileStore()
+        let store = ProfileStore()
+        let apple = FanProfile(id: FanProfile.appleAutoID, name: "Apple Auto",
+            drivers: [DriverSensor(key: "TC0D")], points: [],
+            fanOffsetRPM: 0, hysteresisC: 0, deltaRpmThreshold: 1)
+        let custom = FanProfile(name: "Custom",
+            drivers: [DriverSensor(key: "TC0D")],
+            points: [CurvePoint(tempC: 30, rpm: 1000), CurvePoint(tempC: 80, rpm: 6000)],
+            fanOffsetRPM: 0, hysteresisC: 0, deltaRpmThreshold: 1)
+        store.saveProfiles([apple, custom])
+        store.activeProfileID = custom.id
+        let fake = FakeFanCurveHelper()
+        let c = FanCurveController(helper: fake, store: store)
+        // First tick takes management of fan 0 (writes .forced + speed).
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0)], temps: [("TC0D", 60)]))
+        XCTAssertTrue(fake.modeCalls.contains(.init(id: 0, mode: FanMode.forced.rawValue)),
+            "precondition: controller took management of fan 0")
+        fake.reset()
+        // User switches to Apple Auto. Observer must call relinquishLocked
+        // synchronously and write .automatic to SMC for fan 0 — BEFORE any
+        // subsequent tick(). The pre-existing bug cleared managedFans first,
+        // so relinquishLocked iterated nothing.
+        store.activeProfileID = apple.id
+        NotificationCenter.default.post(name: .fanProfileChanged, object: nil)
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.05))
+        XCTAssertTrue(fake.modeCalls.contains(.init(id: 0, mode: FanMode.automatic.rawValue)),
+            "switching to Apple Auto must immediately relinquish fan 0 to .automatic")
+        _ = c
         clearProfileStore()
     }
 }

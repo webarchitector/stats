@@ -64,8 +64,13 @@ class Helper: NSObject, NSXPCListenerDelegate, HelperProtocol {
         let store = PersistentProfileStore()
         let takeover = HelperTakeoverStore()
         let logger = HelperLogger()
-        let writer = SMCFanWriter()
-        let reader = HelperSensorReader()
+        // One serial queue shared by the writer AND the reader so every SMC
+        // access (tick-loop reads/writes vs. XPC setOverride/getStatus/shutdown
+        // on their own delivery queues) is serialized against the single
+        // `SMC.shared` connection.
+        let smcAccess = DispatchQueue(label: "eu.exelban.Stats.SMC.Helper.smcAccess")
+        let writer = SMCFanWriter(accessQueue: smcAccess)
+        let reader = HelperSensorReader(accessQueue: smcAccess)
         let clock = SystemFanCoreClock()
         let engine = FanCurveEngine(helper: writer, takeover: takeover, clock: clock, logger: logger)
         let runloop = DaemonRunloop(reader: reader, engine: engine, store: store, logger: logger)

@@ -32,9 +32,15 @@ private struct HelperSensor: FanCoreSensor {
 
 public final class HelperSensorReader {
     private let smc: SMC
+    /// Shared with `SMCFanWriter` so SMC reads serialize against the tick
+    /// loop's writes — `SMC.shared` is a single connection with no internal
+    /// locking. See `SMCFanWriter.accessQueue`.
+    private let accessQueue: DispatchQueue
 
-    public init(smc: SMC = .shared) {
+    public init(smc: SMC = .shared,
+                accessQueue: DispatchQueue = DispatchQueue(label: "eu.exelban.Stats.SMC.Helper.smcAccess")) {
         self.smc = smc
+        self.accessQueue = accessQueue
     }
 
     /// Build a snapshot of fans + driver-sensor temperatures for the
@@ -42,9 +48,11 @@ public final class HelperSensorReader {
     /// is nil (the engine treats this as "relinquish"); fans are always
     /// enumerated so the engine can still clear stale `.forced` modes.
     public func read(profile: FanProfile?) -> EngineSnapshot {
-        let fans = self.readFans()
-        let sensors = self.readSensors(driverKeys: profile?.drivers.map { $0.key } ?? [])
-        return EngineSnapshot(sensors: sensors, fans: fans)
+        self.accessQueue.sync {
+            let fans = self.readFans()
+            let sensors = self.readSensors(driverKeys: profile?.drivers.map { $0.key } ?? [])
+            return EngineSnapshot(sensors: sensors, fans: fans)
+        }
     }
 
     // MARK: - Fans

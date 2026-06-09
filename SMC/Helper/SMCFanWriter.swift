@@ -16,9 +16,20 @@ import Foundation
 
 public final class SMCFanWriter: FanCurveHelper {
     private let smc: SMC
+    /// Serializes every SMC access in the daemon. `SMC.shared` is a single
+    /// `io_connect_t` with no internal locking, and `setFanSpeed`/`setFanMode`
+    /// are non-atomic read-modify-write sequences. The tick loop runs on
+    /// `DaemonRunloop.queue` while XPC methods (`setOverride`, `getStatusJSON`,
+    /// `setEnabled`→`shutdown`) touch the same connection from their own
+    /// delivery queues — without a shared queue those calls interleave and
+    /// corrupt the SMC transaction. The SAME queue instance is injected into
+    /// `HelperSensorReader` so reads and writes serialize against each other.
+    private let accessQueue: DispatchQueue
 
-    public init(smc: SMC = .shared) {
+    public init(smc: SMC = .shared,
+                accessQueue: DispatchQueue = DispatchQueue(label: "eu.exelban.Stats.SMC.Helper.smcAccess")) {
         self.smc = smc
+        self.accessQueue = accessQueue
     }
 
     /// We ARE the privileged daemon — there's no "helper" to be active or
@@ -37,10 +48,10 @@ public final class SMCFanWriter: FanCurveHelper {
             NSLog("SMCFanWriter: refusing to forward .curve sentinel to SMC")
             return
         }
-        self.smc.setFanMode(id, mode: resolved)
+        self.accessQueue.sync { self.smc.setFanMode(id, mode: resolved) }
     }
 
     public func setFanSpeed(id: Int, value: Int) {
-        self.smc.setFanSpeed(id, speed: value)
+        self.accessQueue.sync { self.smc.setFanSpeed(id, speed: value) }
     }
 }

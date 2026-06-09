@@ -167,6 +167,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
                 Store.shared.set(key: "fanctl_daemonMode", value: daemonMode)
                 if daemonMode {
                     info("Helper is daemon-aware (v\(version)) - in-app controller will be disabled on next launch")
+                    // If the daemon has no active profile (fresh install /
+                    // post `make uninstall-helper`), push the app's cached
+                    // profile list + selection so fans get managed from this
+                    // launch instead of sitting in Apple Auto until the user
+                    // touches the UI.
+                    DispatchQueue.global(qos: .background).async {
+                        ProfileStore.shared.bootstrapDaemonIfNeeded()
+                    }
                     return
                 }
                 if version == 0 && !helperInstalled {
@@ -217,6 +225,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
                             let daemonMode = v >= 2
                             Store.shared.set(key: "fanctl_daemonMode", value: daemonMode)
                             info("Post-install probe: helper protocolVersion=\(v), daemonMode=\(daemonMode)")
+                            if daemonMode {
+                                DispatchQueue.global(qos: .background).async {
+                                    ProfileStore.shared.bootstrapDaemonIfNeeded()
+                                }
+                            }
                         }
                     }
                 } else {

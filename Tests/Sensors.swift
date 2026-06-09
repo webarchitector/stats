@@ -594,6 +594,24 @@ final class SensorsTests: XCTestCase {
         Store.shared.remove("fanctl_daemonMode")
     }
 
+    func testProfileStore_bootstrapDaemonIfNeeded_noOpWhenDaemonModeOff() {
+        // Doc-test: with daemon mode OFF, `bootstrapDaemonIfNeeded` must
+        // gate before any XPC traffic. We can't unit-test the daemon-ON
+        // path here — `SMCHelper.shared.getStatusJSON` would attempt a real
+        // XPC connection and hang the test process. The negative path is
+        // what protects CI: if the gate ever regresses, this test locks up.
+        clearProfileStore()
+        Store.shared.set(key: "fanctl_daemonMode", value: false)
+        let store = ProfileStore()
+        store.bootstrapIfNeeded(fanCount: 1, defaultMaxRPM: 7000)
+        let before = store.loadProfiles().count
+        store.bootstrapDaemonIfNeeded()
+        XCTAssertEqual(store.loadProfiles().count, before, "local profiles untouched")
+        XCTAssertGreaterThan(before, 0, "bootstrap seeded built-ins")
+        clearProfileStore()
+        Store.shared.remove("fanctl_daemonMode")
+    }
+
     // MARK: - Bootstrap
 
     func testBootstrap_emptyStore_writesBuiltInsAndPicksAggressive() {

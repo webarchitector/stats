@@ -230,4 +230,54 @@ extension ProfileStore {
             activeProfileID = aggressive.id
         }
     }
+
+    /// When daemon mode is on, ensure the daemon has the same profile list and
+    /// active selection that the app has cached locally. Called once at app
+    /// launch after `fanctl_daemonMode` is confirmed true.
+    ///
+    /// After `make uninstall-helper` + reinstall, the daemon's
+    /// `/Library/Application Support/Stats/{profiles,active}.json` are empty
+    /// and it sits in Apple Auto / relinquish mode until the user touches the
+    /// UI (which triggers `saveProfiles` → push). This bootstrap closes that
+    /// gap so a freshly-installed daemon picks up the app's last selection
+    /// immediately on launch.
+    ///
+    /// Edge cases:
+    /// - Daemon never responds to `getStatusJSON` → `data == nil` → treated as
+    ///   empty; bootstrap runs. Safe (no-op if app also has no profiles).
+    /// - App has no profiles locally (truly fresh install before
+    ///   `bootstrapIfNeeded`) → skip; daemon stays in relinquish mode until
+    ///   the user picks a profile, at which point the normal push path fires.
+    /// - Daemon already has a profile → do nothing; the regular write-through
+    ///   path in `saveProfiles` / `activeProfileID` keeps it in sync.
+    public func bootstrapDaemonIfNeeded() {
+        guard self.daemonMode else { return }
+        SMCHelper.shared.getStatusJSON { [weak self] data in
+            guard let self = self else { return }
+            let hasDaemonProfile: Bool
+            if let data = data,
+               let status = try? JSONDecoder().decode(HelperStatus.self, from: data),
+               status.activeProfileID != nil {
+                hasDaemonProfile = true
+            } else {
+                hasDaemonProfile = false
+            }
+            guard !hasDaemonProfile else { return }
+
+            let profiles = self.loadProfiles()
+            guard !profiles.isEmpty else { return }
+            if let payload = try? JSONEncoder().encode(profiles) {
+                SMCHelper.shared.saveProfilesJSON(payload) { err in
+                    if let err { error("daemon bootstrap saveProfilesJSON failed: \(err)") }
+                }
+            }
+            if let active = self.activeProfile(),
+               let payload = try? JSONEncoder().encode(active) {
+                SMCHelper.shared.setActiveProfileJSON(payload) { err in
+                    if let err { error("daemon bootstrap setActiveProfileJSON failed: \(err)") }
+                }
+                info("Bootstrapped daemon: \(profiles.count) profiles, active=\(active.name)")
+            }
+        }
+    }
 }

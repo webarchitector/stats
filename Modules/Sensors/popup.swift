@@ -660,7 +660,28 @@ internal class FanView: NSStackView {
             if let fan = self?.fan, mode == .automatic || fan.mode != mode {
                 self?.fan.mode = mode
                 self?.fan.customMode = mode
-                SMCHelper.shared.setFanMode(fan.id, mode: mode.rawValue)
+                // Daemon mode: when the user picks a curve profile we get
+                // `callback(.automatic)` — translate to `setOverride(.curve)`
+                // so the daemon clears any user-takeover for this fan.
+                // Manual (.forced) is handled via the daemon path inside
+                // `setOverride(.manual)`; legacy `setFanMode` is bypassed.
+                let daemonMode = Store.shared.bool(key: "fanctl_daemonMode", defaultValue: false)
+                if daemonMode {
+                    if mode == .automatic {
+                        SMCHelper.shared.setOverride(rawMode: OverrideKind.curve.rawValue,
+                                                     fanId: fan.id, value: 0) { _ in }
+                    } else if mode == .forced {
+                        // Manual: daemon takes over via .manual with current
+                        // RPM as the seed. User slider drags afterwards reuse
+                        // the legacy `setFanSpeed` XPC path which the daemon
+                        // routes through `SMCFanWriter` for user-owned fans.
+                        let seedRPM = self?.fan.customSpeed ?? Int(self?.fan.value ?? 0)
+                        SMCHelper.shared.setOverride(rawMode: OverrideKind.manual.rawValue,
+                                                     fanId: fan.id, value: seedRPM) { _ in }
+                    }
+                } else {
+                    SMCHelper.shared.setFanMode(fan.id, mode: mode.rawValue)
+                }
             }
             self?.toggleControlView(mode == .forced)
         }
@@ -668,11 +689,17 @@ internal class FanView: NSStackView {
             if let fan = self?.fan {
                 if self?.fan.mode != .forced {
                     self?.fan.mode = .forced
-                    SMCHelper.shared.setFanMode(fan.id, mode: FanMode.forced.rawValue)
                 }
                 self?.fan.customMode = .forced  // signal controller to yield
-                SMCHelper.shared.setFanSpeed(fan.id, speed: 0)
                 self?.fan.customSpeed = 0
+                let daemonMode = Store.shared.bool(key: "fanctl_daemonMode", defaultValue: false)
+                if daemonMode {
+                    SMCHelper.shared.setOverride(rawMode: OverrideKind.off.rawValue,
+                                                 fanId: fan.id, value: 0) { _ in }
+                } else {
+                    SMCHelper.shared.setFanMode(fan.id, mode: FanMode.forced.rawValue)
+                    SMCHelper.shared.setFanSpeed(fan.id, speed: 0)
+                }
             }
             self?.toggleControlView(false)
         }
@@ -680,11 +707,17 @@ internal class FanView: NSStackView {
             if let fan = self?.fan {
                 if self?.fan.mode != .forced {
                     self?.fan.mode = .forced
-                    SMCHelper.shared.setFanMode(fan.id, mode: FanMode.forced.rawValue)
                 }
                 self?.fan.customMode = .forced  // signal controller to yield
-                SMCHelper.shared.setFanSpeed(fan.id, speed: Int(fan.maxSpeed))
                 self?.fan.customSpeed = Int(fan.maxSpeed)
+                let daemonMode = Store.shared.bool(key: "fanctl_daemonMode", defaultValue: false)
+                if daemonMode {
+                    SMCHelper.shared.setOverride(rawMode: OverrideKind.max.rawValue,
+                                                 fanId: fan.id, value: 0) { _ in }
+                } else {
+                    SMCHelper.shared.setFanMode(fan.id, mode: FanMode.forced.rawValue)
+                    SMCHelper.shared.setFanSpeed(fan.id, speed: Int(fan.maxSpeed))
+                }
             }
             self?.toggleControlView(false)
         }
@@ -1132,6 +1165,16 @@ private class ModeButtons: NSStackView {
         default:
             if let uuid = UUID(uuidString: raw) {
                 ProfileStore.shared.activeProfileID = uuid
+                // In daemon mode, additionally clear user takeover for every
+                // possible fan id so the daemon's HelperTakeoverStore lets the
+                // engine drive again. Fans the daemon doesn't know about are
+                // a cheap no-op on the helper side.
+                if Store.shared.bool(key: "fanctl_daemonMode", defaultValue: false) {
+                    for fanId in 0...3 {
+                        SMCHelper.shared.setOverride(rawMode: OverrideKind.curve.rawValue,
+                                                     fanId: fanId, value: 0) { _ in }
+                    }
+                }
                 NotificationCenter.default.post(name: .fanProfileChanged, object: nil)
                 // Hide the slider — FanView observes callback(.automatic) for this.
                 // Controller's next tick will assert .forced under the new curve.
@@ -1147,7 +1190,12 @@ private class ModeButtons: NSStackView {
     /// Switch active profile to "Apple Auto" (empty points) silently — controller
     /// relinquishes on its next tick so direct SMC writes from Manual/Off/Max stick.
     /// Looks up by stable UUID (not name) to survive localization or renames.
+    ///
+    /// Daemon mode: no-op. The daemon's `HelperTakeoverStore` already marks
+    /// per-fan user takeover via `setOverride(.manual/.off/.max)`, so the
+    /// engine yields without us having to flip the active profile.
     private func silentlyActivateAppleAuto() {
+        if Store.shared.bool(key: "fanctl_daemonMode", defaultValue: false) { return }
         let profiles = ProfileStore.shared.loadProfiles()
         if profiles.contains(where: { $0.id == FanProfile.appleAutoID }) {
             ProfileStore.shared.activeProfileID = FanProfile.appleAutoID

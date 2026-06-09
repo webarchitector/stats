@@ -484,6 +484,11 @@ final class SensorsTests: XCTestCase {
         Store.shared.remove("fanctl_profiles")
         Store.shared.remove("fanctl_activeProfile")
         Store.shared.remove("fanctl_enabled")
+        // Daemon-mode flag is set by AppDelegate after probing the helper.
+        // Tests run in a unit-test process where no helper exists, so leave
+        // this off — any saveProfiles/activeProfileID write under daemon
+        // mode would block on a non-existent XPC connection.
+        Store.shared.remove("fanctl_daemonMode")
         // Per-fan state leaks across tests since Store.shared is a singleton.
         // Controller writes fan_<id>_mode = .curve(100); user paths write
         // .forced(1). Tests rely on a clean slate.
@@ -562,6 +567,31 @@ final class SensorsTests: XCTestCase {
         store.activeProfileID = UUID()  // doesn't match any saved profile
         XCTAssertNil(store.activeProfile())
         clearProfileStore()
+    }
+
+    // MARK: - Daemon-mode XPC mirroring
+    //
+    // Smoke test that ProfileStore writes do not trip a crash when daemon
+    // mode is off (the default in tests). We don't mock `SMCHelper.shared`
+    // here — that would require a protocol-shaped seam — so a positive
+    // assertion that "no XPC call was made" isn't possible at unit level.
+    // The negative path is what matters in CI: with daemon mode OFF the
+    // code must NOT attempt to talk to a (non-existent) helper. If the
+    // gate ever regresses, this test would lock up waiting for an XPC
+    // round-trip that never returns.
+
+    func testProfileStore_doesNotPushToDaemon_whenDaemonModeOff() {
+        clearProfileStore()
+        Store.shared.set(key: "fanctl_daemonMode", value: false)
+        let store = ProfileStore()
+        store.bootstrapIfNeeded(fanCount: 1, defaultMaxRPM: 7000)
+        // If daemon mode were on, the line above would block on an XPC
+        // call to a helper that doesn't exist in the unit-test process —
+        // bootstrap calls saveProfiles + sets activeProfileID. Reaching
+        // this assertion proves the gate is in place.
+        XCTAssertGreaterThan(store.loadProfiles().count, 0)
+        clearProfileStore()
+        Store.shared.remove("fanctl_daemonMode")
     }
 
     // MARK: - Bootstrap

@@ -44,11 +44,22 @@ public class Sensors: Module {
 
         let profileStore = ProfileStore.shared
         let curveHelper = SMCHelperAdapter.shared
-        self.fanController = FanCurveController(helper: curveHelper, store: profileStore)
-        Self.resetStaleCurveModes(helper: curveHelper, store: profileStore)
+        // When the installed helper speaks XPC v2+ (cached at last app launch
+        // by `AppDelegate.applicationDidFinishLaunching`), the daemon owns
+        // the tick loop server-side. Skip constructing the in-app controller
+        // so we don't have two writers racing on the same SMC keys.
+        let daemonMode = Store.shared.bool(key: "fanctl_daemonMode", defaultValue: false)
+        if !daemonMode {
+            self.fanController = FanCurveController(helper: curveHelper, store: profileStore)
+            Self.resetStaleCurveModes(helper: curveHelper, store: profileStore)
+        } else {
+            self.fanController = nil
+            info("Daemon mode active - Sensors module skipped in-app FanCurveController init")
+        }
 
         self.sensorsReader = SensorsReader { [weak self] value in
             self?.usageCallback(value)
+            // Nil-coalesced via optional chain — no-op in daemon mode.
             self?.fanController?.tick(snapshot: value)
         }
         
@@ -95,6 +106,11 @@ public class Sensors: Module {
     }
     
     public override func willTerminate() {
+        // Daemon mode: the helper owns all fan state — quitting the app must
+        // NOT touch SMC. The whole point of Phase 5 is "Stats can be quit
+        // while fans continue to be managed by the daemon".
+        if Store.shared.bool(key: "fanctl_daemonMode", defaultValue: false) { return }
+
         self.fanController?.shutdown()
 
         guard SMCHelper.shared.isActive(), let reader = self.sensorsReader else { return }
@@ -112,7 +128,15 @@ public class Sensors: Module {
     /// only stops the readers — it doesn't fire willTerminate, so without this
     /// override the fanController stays in .forced mode at last-applied RPM.
     /// Release managed fans before the readers stop ticking.
+    ///
+    /// Daemon mode: skip — the daemon still ticks and the user's expectation
+    /// (per spec) is "engine keeps running". To pause the daemon they call
+    /// `SMCHelper.shared.setEnabled(false)` (currently unwired in the UI).
     public override func disable() {
+        if Store.shared.bool(key: "fanctl_daemonMode", defaultValue: false) {
+            super.disable()
+            return
+        }
         self.fanController?.shutdown()
         super.disable()
     }

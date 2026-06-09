@@ -76,6 +76,23 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         self.parseArguments()
         self.parseVersion()
         SMCHelper.shared.checkForUpdate()
+        // Probe helper protocol version asynchronously and cache the result.
+        // v2+ helpers own the curve tick loop server-side; the app's in-app
+        // FanCurveController becomes redundant in that mode. The cached flag
+        // is read by Sensors.init on the NEXT app launch — meaning the first
+        // launch after installing a v2 helper still uses the in-app
+        // controller. This is an intentional simplicity trade-off (no
+        // synchronous probe at module init time, no race) and self-corrects
+        // on relaunch.
+        SMCHelper.shared.protocolVersion { version in
+            let daemonMode = version >= 2
+            Store.shared.set(key: "fanctl_daemonMode", value: daemonMode)
+            if daemonMode {
+                info("Helper is daemon-aware (v\(version)) - in-app controller will be disabled on next launch")
+            } else {
+                info("Helper is v\(version) (legacy) - using in-app controller")
+            }
+        }
         self.setup {
             modules.reversed().forEach{ $0.mount() }
             self.showSettingsIfNoActiveWidgets()

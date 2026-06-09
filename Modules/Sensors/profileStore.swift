@@ -9,6 +9,12 @@ import Foundation
 import Kit
 
 /// Persistence layer for fan curve profiles. Backs onto UserDefaults via `Store.shared`.
+///
+/// In daemon mode (`fanctl_daemonMode` flag set by `AppDelegate` after the v2
+/// helper probe) every write also mirrors out to the helper via XPC so the
+/// daemon's `HelperProfileStore` stays in sync. The UserDefaults cache
+/// remains the source of truth for app-side UI — the daemon has its own
+/// on-disk JSON at `/Library/Application Support/Stats/`.
 public final class ProfileStore {
     public static let shared = ProfileStore()
 
@@ -16,6 +22,10 @@ public final class ProfileStore {
     private let activeKey   = "fanctl_activeProfile"
 
     public init() {}
+
+    private var daemonMode: Bool {
+        Store.shared.bool(key: "fanctl_daemonMode", defaultValue: false)
+    }
 
     public func loadProfiles() -> [FanProfile] {
         guard let data = Store.shared.data(key: profilesKey) else { return [] }
@@ -25,6 +35,11 @@ public final class ProfileStore {
     public func saveProfiles(_ profiles: [FanProfile]) {
         guard let data = try? JSONEncoder().encode(profiles) else { return }
         Store.shared.set(key: profilesKey, value: data)
+        if self.daemonMode {
+            SMCHelper.shared.saveProfilesJSON(data) { err in
+                if let err { error("daemon saveProfilesJSON failed: \(err)") }
+            }
+        }
     }
 
     public var activeProfileID: UUID? {
@@ -34,6 +49,22 @@ public final class ProfileStore {
         }
         set {
             Store.shared.set(key: activeKey, value: newValue?.uuidString ?? "")
+            if self.daemonMode {
+                // Resolve the UUID against the just-saved profile list and
+                // push the full FanProfile to the daemon. nil / unresolved =
+                // clear (Apple Auto firmware fallback). Encoded payload is a
+                // single FanProfile, matching `Helper.setActiveProfileJSON`'s
+                // empty-Data sentinel for clear.
+                if let newValue,
+                   let active = self.loadProfiles().first(where: { $0.id == newValue }),
+                   let data = try? JSONEncoder().encode(active) {
+                    SMCHelper.shared.setActiveProfileJSON(data) { err in
+                        if let err { error("daemon setActiveProfileJSON failed: \(err)") }
+                    }
+                } else {
+                    SMCHelper.shared.setActiveProfileJSON(Data()) { _ in }
+                }
+            }
         }
     }
 

@@ -18,6 +18,10 @@ jobs:
         run: |
           xcodebuild -version
           swift --version
+          sw_vers
+          xcrun --show-sdk-path --sdk macosx
+          xcodebuild -showdestinations -project Stats.xcodeproj -scheme Stats 2>&1 | head -40 || true
+          security find-identity -v -p codesigning 2>&1 || true
 
       # Project pins DEVELOPMENT_TEAM=RP2S87B72W + CODE_SIGN_STYLE=Automatic;
       # CI has no Apple Developer cert. Mirror `make local`: clear the team,
@@ -26,6 +30,7 @@ jobs:
       # and `xcodebuild build` exits 65 even with CODE_SIGNING_ALLOWED=NO.
       - name: Build
         run: |
+          set -o pipefail
           xcodebuild -scheme Stats -configuration Debug \
             -destination 'platform=macOS,arch=arm64' \
             CODE_SIGN_IDENTITY="-" \
@@ -35,7 +40,21 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             ONLY_ACTIVE_ARCH=YES \
-            build
+            build 2>&1 | tee /tmp/xcb-build.log
+          rc=$?
+          if [ "$rc" != "0" ]; then
+            echo "::group::Last 200 lines of build log"
+            tail -200 /tmp/xcb-build.log
+            echo "::endgroup::"
+            # surface every error as a GH annotation so we can read it via
+            # the public check-runs annotations API (no auth required).
+            grep -E "error:|FAILED|fatal" /tmp/xcb-build.log | head -50 | while read -r line; do
+              # escape % \n \r per GH workflow command spec
+              esc=$(printf '%s' "$line" | sed 's/%/%25/g; s/\r/%0D/g; s/\n/%0A/g')
+              echo "::error::xcb: $esc"
+            done
+            exit $rc
+          fi
 
       - name: Test
         run: |

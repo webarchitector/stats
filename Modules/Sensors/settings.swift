@@ -106,31 +106,32 @@ internal class Settings: NSStackView, Settings_v {
 
         // Fan curves are always enabled. Activate Apple Auto profile to defer
         // to firmware; pick any other profile to take over.
+        //
+        // Settings only exposes per-profile editing (curve, drivers, advanced)
+        // and profile management (duplicate/delete). The active profile picker
+        // lives in the menubar popup (FanView).
         let curveContainer = NSStackView()
         curveContainer.orientation = .vertical
         curveContainer.spacing = Constants.Settings.margin
+        curveContainer.alignment = .width
         self.fanCurveContainer = curveContainer
         self.addArrangedSubview(curveContainer)
-
-        // Active profile picker now lives in the menubar popup (FanView).
-        // Settings only exposes per-profile editing (curve, drivers, advanced)
-        // and profile management (duplicate/delete) operating on the active profile.
-        let duplicateBtn = NSButton(title: localizedString("Duplicate"),
-                                    target: self,
-                                    action: #selector(self.duplicateProfile))
-        let deleteBtn = NSButton(title: localizedString("Delete"),
-                                 target: self,
-                                 action: #selector(self.deleteProfile))
-        self.deleteBtn = deleteBtn
-        deleteBtn.isEnabled = !(ProfileStore.shared.activeProfile()?.isBuiltIn ?? true)
-        let buttonRow = NSStackView(views: [duplicateBtn, deleteBtn])
-        buttonRow.spacing = 8
-        curveContainer.addArrangedSubview(buttonRow)
 
         NotificationCenter.default.addObserver(self,
             selector: #selector(self.activeProfileChangedExternally),
             name: .fanProfileChanged, object: nil)
 
+        // ─── Graph (visual anchor — sized so the curve is readable at a glance) ───
+        let graph = CurveGraphView()
+        graph.translatesAutoresizingMaskIntoConstraints = false
+        graph.heightAnchor.constraint(equalToConstant: 220).isActive = true
+        self.graphView = graph
+
+        let graphSection = PreferencesSection(title: localizedString("Fan curve"))
+        graphSection.add(graph)
+        curveContainer.addArrangedSubview(graphSection)
+
+        // ─── Points table with inline +/− next to the header ───
         let table = NSTableView()
         let tempCol = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("temp"))
         tempCol.title = localizedString("Temp °C")
@@ -149,26 +150,30 @@ internal class Settings: NSStackView, Settings_v {
         scroll.documentView = table
         scroll.hasVerticalScroller = true
         scroll.translatesAutoresizingMaskIntoConstraints = false
-        scroll.heightAnchor.constraint(equalToConstant: 180).isActive = true
+        scroll.heightAnchor.constraint(equalToConstant: 160).isActive = true
         self.pointsTable = table
-        curveContainer.addArrangedSubview(scroll)
-
-        let graph = CurveGraphView()
-        graph.translatesAutoresizingMaskIntoConstraints = false
-        graph.heightAnchor.constraint(equalToConstant: 100).isActive = true
-        self.graphView = graph
-        curveContainer.addArrangedSubview(graph)
 
         let addBtn = NSButton(title: "+", target: self, action: #selector(self.addPoint))
         let removeBtn = NSButton(title: "−", target: self, action: #selector(self.removePoint))
-        let pointBtnRow = NSStackView(views: [addBtn, removeBtn])
-        pointBtnRow.spacing = 8
-        curveContainer.addArrangedSubview(pointBtnRow)
+        addBtn.bezelStyle = .roundRect
+        removeBtn.bezelStyle = .roundRect
+        addBtn.toolTip = localizedString("Add point")
+        removeBtn.toolTip = localizedString("Remove selected point")
+        let pointsHeader = NSStackView(views: [addBtn, removeBtn])
+        pointsHeader.orientation = .horizontal
+        pointsHeader.spacing = 6
 
+        let pointsSection = PreferencesSection(title: localizedString("Points"))
+        pointsSection.add(PreferencesRow(nil, component: pointsHeader))
+        pointsSection.add(scroll)
+        curveContainer.addArrangedSubview(pointsSection)
+
+        // ─── Driver sensors ───
         let driversTableView = NSTableView()
         let driverCol = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("driver"))
-        driverCol.title = localizedString("Driver sensors (max of)")
+        driverCol.title = localizedString("Sensor")
         driversTableView.addTableColumn(driverCol)
+        driversTableView.headerView = nil
         driversTableView.dataSource = self.driversDataSource
         driversTableView.delegate = self.driversDataSource
         self.driversDataSource.onToggle = { [weak self] sel in
@@ -178,43 +183,64 @@ internal class Settings: NSStackView, Settings_v {
         driverScroll.documentView = driversTableView
         driverScroll.hasVerticalScroller = true
         driverScroll.translatesAutoresizingMaskIntoConstraints = false
-        driverScroll.heightAnchor.constraint(equalToConstant: 150).isActive = true
+        driverScroll.heightAnchor.constraint(equalToConstant: 140).isActive = true
         self.driversTable = driversTableView
-        curveContainer.addArrangedSubview(driverScroll)
 
+        let driversSection = PreferencesSection(
+            title: localizedString("Driver sensors (max of)")
+        )
+        driversSection.add(driverScroll)
+        curveContainer.addArrangedSubview(driversSection)
+
+        // ─── Advanced: offset, hysteresis, threshold ───
         let offset = NSTextField()
         offset.target = self
         offset.action = #selector(self.commitOffset(_:))
         offset.stringValue = String(ProfileStore.shared.activeProfile()?.fanOffsetRPM ?? 50)
+        offset.widthAnchor.constraint(equalToConstant: 80).isActive = true
         self.offsetField = offset
         let offsetRow = PreferencesRow(
             localizedString("Secondary fan offset (RPM)"), component: offset)
         offsetRow.isHidden = self.list.compactMap({ $0 as? Fan }).count < 2
         self.offsetRow = offsetRow
-        curveContainer.addArrangedSubview(offsetRow)
-
-        let advancedBox = NSBox()
-        advancedBox.title = localizedString("Advanced")
-        let advStack = NSStackView()
-        advStack.orientation = .vertical
-        advStack.spacing = 4
 
         let hyst = NSTextField()
         hyst.target = self
         hyst.action = #selector(self.commitHysteresis(_:))
         hyst.stringValue = String(ProfileStore.shared.activeProfile()?.hysteresisC ?? 2.0)
+        hyst.widthAnchor.constraint(equalToConstant: 80).isActive = true
         self.hysteresisField = hyst
-        advStack.addArrangedSubview(PreferencesRow(localizedString("Hysteresis (°C)"), component: hyst))
 
         let thresh = NSTextField()
         thresh.target = self
         thresh.action = #selector(self.commitThreshold(_:))
         thresh.stringValue = String(ProfileStore.shared.activeProfile()?.deltaRpmThreshold ?? 150)
+        thresh.widthAnchor.constraint(equalToConstant: 80).isActive = true
         self.thresholdField = thresh
-        advStack.addArrangedSubview(PreferencesRow(localizedString("RPM apply threshold"), component: thresh))
 
-        advancedBox.contentView = advStack
-        curveContainer.addArrangedSubview(advancedBox)
+        let advancedSection = PreferencesSection(title: localizedString("Advanced"))
+        advancedSection.add(offsetRow)
+        advancedSection.add(PreferencesRow(localizedString("Hysteresis (°C)"), component: hyst))
+        advancedSection.add(PreferencesRow(localizedString("RPM apply threshold"), component: thresh))
+        curveContainer.addArrangedSubview(advancedSection)
+
+        // ─── Bottom action bar (Duplicate / Delete) ───
+        let duplicateBtn = NSButton(title: localizedString("Duplicate"),
+                                    target: self,
+                                    action: #selector(self.duplicateProfile))
+        let deleteBtn = NSButton(title: localizedString("Delete"),
+                                 target: self,
+                                 action: #selector(self.deleteProfile))
+        self.deleteBtn = deleteBtn
+        deleteBtn.isEnabled = !(ProfileStore.shared.activeProfile()?.isBuiltIn ?? true)
+        let spacer = NSView()
+        spacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        let buttonRow = NSStackView(views: [spacer, duplicateBtn, deleteBtn])
+        buttonRow.orientation = .horizontal
+        buttonRow.spacing = 8
+        let actionSection = PreferencesSection()
+        actionSection.add(buttonRow)
+        curveContainer.addArrangedSubview(actionSection)
 
         self.refreshCurveEditor()
     }

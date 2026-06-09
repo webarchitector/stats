@@ -50,6 +50,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     
     private var startTS: Date?
     private var launchStart: Date?
+
+    /// Set after a user-facing reinstall prompt has been shown in the current
+    /// session. Probe completion is async and can fire more than once during
+    /// startup (e.g. helper disconnected mid-probe) — without this guard the
+    /// user could see the alert two or three times in quick succession.
+    private static var didPromptForReinstall = false
     
     static func main() {
         let launchStart = Date()
@@ -84,15 +90,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         // controller. This is an intentional simplicity trade-off (no
         // synchronous probe at module init time, no race) and self-corrects
         // on relaunch.
-        SMCHelper.shared.protocolVersion { version in
-            let daemonMode = version >= 2
-            Store.shared.set(key: "fanctl_daemonMode", value: daemonMode)
-            if daemonMode {
-                info("Helper is daemon-aware (v\(version)) - in-app controller will be disabled on next launch")
-            } else {
-                info("Helper is v\(version) (legacy) - using in-app controller")
-            }
-        }
+        self.probeHelperAndMaybePromptMigration()
         self.setup {
             modules.reversed().forEach{ $0.mount() }
             self.showSettingsIfNoActiveWidgets()
@@ -145,6 +143,93 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         self.ensureSettingsWindow().open(module: module)
     }
     
+    /// Probe the installed helper's XPC protocol version, cache the
+    /// daemon-mode flag, and — if the helper is v1 / missing / unreachable —
+    /// surface a one-time reinstall prompt. The probe completion runs on a
+    /// background queue (XPC); UI work hops to `.main`.
+    ///
+    /// Decision matrix:
+    /// - Helper file missing → prompt (helper not installed at all).
+    /// - Probe times out after 3 s → prompt (file present but daemon stuck).
+    /// - Probe returns 0 / 1 → prompt (legacy v1 helper still on disk).
+    /// - Probe returns ≥ 2 → cache `fanctl_daemonMode = true`, no prompt.
+    ///
+    /// The prompt is dismissable; user choice to skip falls through to the
+    /// in-app `FanCurveController` (helper file might still be a working v1).
+    private func probeHelperAndMaybePromptMigration() {
+        let helperInstalled = SMCHelper.shared.isInstalled
+        var settled = false
+        let settle: (Int) -> Void = { version in
+            DispatchQueue.main.async {
+                if settled { return }
+                settled = true
+                let daemonMode = version >= 2
+                Store.shared.set(key: "fanctl_daemonMode", value: daemonMode)
+                if daemonMode {
+                    info("Helper is daemon-aware (v\(version)) - in-app controller will be disabled on next launch")
+                    return
+                }
+                if version == 0 && !helperInstalled {
+                    info("Helper not installed - prompting user to install")
+                } else {
+                    info("Helper is v\(version) (legacy) - prompting user to reinstall")
+                }
+                self.promptForHelperReinstall(currentVersion: version, helperInstalled: helperInstalled)
+            }
+        }
+        SMCHelper.shared.protocolVersion { version in settle(version) }
+        // 3 s safety net — if XPC blocks (file present, daemon wedged) we
+        // still want to give the user feedback rather than spin forever.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            settle(0)
+        }
+    }
+
+    /// Show a modal NSAlert offering to (re)install the helper. Runs at most
+    /// once per session (`didPromptForReinstall`).
+    ///
+    /// Why no week-long suppression: probe runs once at launch; if user
+    /// dismissed, they won't see it again until the next app launch — already
+    /// rare enough. Adding a Store-backed timestamp adds state that can
+    /// desync across upgrades.
+    private func promptForHelperReinstall(currentVersion: Int, helperInstalled: Bool) {
+        if Self.didPromptForReinstall { return }
+        Self.didPromptForReinstall = true
+
+        let alert = NSAlert()
+        if !helperInstalled {
+            alert.messageText = "Install fan control helper?"
+            alert.informativeText = "Stats uses a background daemon for fan control. The helper needs to be installed. You'll be prompted for your password."
+        } else {
+            alert.messageText = "Helper update required"
+            alert.informativeText = "Stats now uses a background daemon for fan control. The installed helper (v\(currentVersion)) needs to be reinstalled. You'll be prompted for your password."
+        }
+        alert.addButton(withTitle: helperInstalled ? "Reinstall Helper" : "Install Helper")
+        alert.addButton(withTitle: "Skip (use in-app fallback)")
+
+        if alert.runModal() == .alertFirstButtonReturn {
+            SMCHelper.shared.install { installed in
+                if installed {
+                    info("Helper (re)install succeeded — re-probing protocol version")
+                    // Give launchd a moment to (re)load the LaunchDaemon plist.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                        SMCHelper.shared.protocolVersion { v in
+                            let daemonMode = v >= 2
+                            Store.shared.set(key: "fanctl_daemonMode", value: daemonMode)
+                            info("Post-install probe: helper protocolVersion=\(v), daemonMode=\(daemonMode)")
+                        }
+                    }
+                } else {
+                    error_msg("Helper (re)install failed; falling back to in-app controller")
+                    Store.shared.set(key: "fanctl_daemonMode", value: false)
+                }
+            }
+        } else {
+            info("User skipped helper (re)install; using in-app controller")
+            Store.shared.set(key: "fanctl_daemonMode", value: false)
+        }
+    }
+
     /// Terminate any older Stats process with the same bundle id. Returning
     /// `true` means OUR process should quit (an even-newer peer was found).
     /// In the common case — user re-launches Stats while a stale copy still

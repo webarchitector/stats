@@ -128,3 +128,27 @@ local: clean
 	cp -R "$(BUILD_PATH)/DerivedData/Build/Products/Release/$(APP).app" /Applications/
 	xattr -cr "/Applications/$(APP).app"
 	@echo "Stats installed to /Applications. Launch from Spotlight."
+
+# Uninstall the privileged helper daemon and clear its persistent state.
+# Useful when removing Stats entirely or recovering from corrupted helper
+# state (stuck profile, broken takeover, mismatched protocol version, etc.).
+# Stats.app itself remains in /Applications — remove via Finder if desired.
+.PHONY: uninstall-helper
+uninstall-helper:
+	@echo "Stopping helper..."
+	-sudo launchctl bootout system/eu.exelban.Stats.SMC.Helper 2>/dev/null
+	@echo "Removing helper files..."
+	-sudo rm -f /Library/LaunchDaemons/eu.exelban.Stats.SMC.Helper.plist
+	-sudo rm -f /Library/PrivilegedHelperTools/eu.exelban.Stats.SMC.Helper
+	@echo "Removing persistent state..."
+	-sudo rm -rf "/Library/Application Support/Stats"
+	@echo "Helper uninstalled. Stats.app remains in /Applications and can be removed via Finder."
+
+# Convenience target: launch Stats so it can prompt the user to install the
+# helper via SMJobBless. There's no command-line way to install a SMJobBless
+# helper without the app running — the auth prompt must be raised by the
+# installer process (Stats.app).
+.PHONY: install-helper
+install-helper:
+	open /Applications/Stats.app
+	@echo "Stats will prompt to install the helper. Approve to continue."

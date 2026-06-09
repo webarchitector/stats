@@ -2,27 +2,35 @@
 
 ## Before Starting
 
-Personal fork of `exelban/stats` extended with **Fan Curve Control** (see `docs/superpowers/specs/2026-06-08-stats-fan-curve-design.md`). Before non-trivial changes to fan-related code, re-read that spec.
+Personal fork of `exelban/stats` extended with **Fan Curve Control**. Two specs document the current state:
+- `docs/superpowers/specs/2026-06-08-stats-fan-curve-design.md` — original in-app design (v3.x).
+- `docs/superpowers/specs/2026-06-09-daemon-refactor.md` — daemon refactor (v4.0.0-ank.1 onward). Helper now owns the tick loop; Stats.app is reduced to the editor + push role.
+
+Before non-trivial changes to fan-related code, re-read the relevant spec.
 
 Key modified files relative to upstream:
 - `SMC/smc.swift` — `FanMode.curve = 100` case + `isStatsControlled` (Stats-internal marker, never written to SMC)
 - `Modules/Sensors/values.swift` — `CurvePoint`, `DriverSensor`, `FanProfile` value types; `Fan.smcMode` (per-tick SMC refresh)
-- `Modules/Sensors/fanCurve.swift` — `FanCurve.interpolate`, `FanCurve.effectiveTemperature`, `FanProfile.builtIns` (6 profiles: Apple Auto / Quiet / Linear / Balanced / Aggressive / Performance), `FanProfile.appleAutoID` (stable UUID) (NEW)
-- `Modules/Sensors/profileStore.swift` — persistence (`fanctl_profiles`, `fanctl_activeProfile` in Store). `enabled` is hard-coded true (no user toggle) (NEW)
-- `Modules/Sensors/fanController.swift` — `FanCurveController` (NSLock-guarded state, runs from background `SensorsReader` thread), `FanCurveHelper` protocol, `SMCHelperAdapter`, smart-fan features (3-sample median smoothing, derivative pre-ramp, battery hot floor), helper-disappear cleanup, Apple-firmware override failsafe, immediate profile-change apply, `FanControllerClock` for tests (NEW)
+- `FanCore/` — 12 pure-Swift files compiled into both `Sensors` and the Helper. `FanCurveEngine`, `FanProfileBuiltins`, `HelperStatus`, `TakeoverStore`, `EngineSnapshot`, `Sensor`, `Types`, `FanCoreClock`, `FanCoreLogger`, `FanCurve`, `FanSnapshot`, `FanCurveHelperProtocol` (NEW, daemon refactor)
+- `SMC/Helper/` — gained 8 new files: `HelperSensorReader.swift`, `SMCFanWriter.swift`, `PersistentProfileStore.swift`, `HelperTakeoverStore.swift`, `HelperLogger.swift`, `DaemonRunloop.swift`, `bridge.h`/`reader.m` (Obj-C IOHID bridge), `HelperBridge.h` (Swift-importable C interop) — turns the helper from a thin SMC shim into a self-contained tick-loop daemon (NEW, daemon refactor)
+- `SMC/Helper/protocol.swift` — v2 XPC surface: `protocolVersion`, `setActiveProfileJSON`, `saveProfilesJSON`, `setOverride`, `getStatusJSON`, `setEnabled`
+- `SMC/Helper/Launchd.plist` — `KeepAlive = true` so daemon survives Stats.app quit and re-spawns on crash
+- `Modules/Sensors/profileStore.swift` — persistence (`fanctl_profiles`, `fanctl_activeProfile` in Store); when daemon mode is on, also calls `setActiveProfileJSON` / `saveProfilesJSON` (NEW)
+- `Modules/Sensors/fanController.swift` — `FanCurveController` (NSLock-guarded state, runs from background `SensorsReader` thread), `FanCurveHelper` protocol, `SMCHelperAdapter`, smart-fan features (3-sample median smoothing, derivative pre-ramp, battery hot floor), helper-disappear cleanup, Apple-firmware override failsafe, immediate profile-change apply, `FanControllerClock` for tests. **In v4 this is the FALLBACK path** — skipped at init when `fanctl_daemonMode = true` (NEW)
 - `Modules/Sensors/readers.swift` — per-tick SMC mode probe into `Fan.smcMode` (~1ms/fan/tick) for override detection
 - `Modules/Sensors/curveGraph.swift` — fan curve graph NSView (320×220 with axes, gridlines, filled curve) (NEW)
 - `Modules/Sensors/settings.swift` — Fan Curves editor as stacked `PreferencesSection`s: Fan curve / Points / Driver sensors / Advanced / action bar. **Active profile picker lives in popup, not Settings.**
-- `Modules/Sensors/main.swift` — wires controller into module lifecycle (init bootstrap, reader callback, `disable()` override, `willTerminate`, crash recovery via `resetStaleCurveModes`)
-- `Modules/Sensors/popup.swift` — single `ModeButtons` NSPopUpButton with profiles + Manual/Off/Max; `lastActionTag` (Store-backed) persists most-recent picker selection across restarts; predicates exclude `.curve` from raw SMC forwarding
+- `Modules/Sensors/main.swift` — wires controller into module lifecycle (init bootstrap, reader callback, `disable()` override, `willTerminate`, crash recovery via `resetStaleCurveModes`); reads `fanctl_daemonMode` and skips constructing the in-app controller when daemon mode is active
+- `Modules/Sensors/popup.swift` — single `ModeButtons` NSPopUpButton with profiles + Manual/Off/Max; `lastActionTag` (Store-backed) persists most-recent picker selection across restarts; predicates exclude `.curve` from raw SMC forwarding; in daemon mode, picker actions route through `SMCHelper.setActiveProfileJSON` / `setOverride`
 - `SMC/main.swift` — CLI rejects writing `mode=100` to SMC
 - `Kit/types.swift` — `.fanProfileChanged` notification name
+- `Kit/helpers.swift` — `SMCHelper.shared` v2 wrappers (`protocolVersion`, `setActiveProfileJSON`, `saveProfilesJSON`, `setOverride`, `getStatusJSON`, `setEnabled`)
 - `Kit/module/module.swift` — `enable()` / `disable()` made `open` so `Sensors` can override `disable()` for controller cleanup
-- `Stats/AppDelegate.swift` — `anotherInstanceIsRunning()` single-instance guard (PID tiebreak, newer-wins, force-terminate older peer)
+- `Stats/AppDelegate.swift` — `anotherInstanceIsRunning()` single-instance guard (PID tiebreak, newer-wins, force-terminate older peer); `probeHelperAndMaybePromptMigration()` runs at launch — caches `fanctl_daemonMode` and shows a one-time NSAlert offering SMJobBless reinstall when the helper is missing/legacy/unreachable
 - `Stats/Supporting Files/Info.plist` — `LSMultipleInstancesProhibited` + relaxed `SMPrivilegedExecutables` (identifier-only)
 - `.github/workflows/test.yml` — CI build+test with signing-team overrides and PIPESTATUS diagnostic block (NEW)
-- `Tests/Sensors.swift` — 111-test suite covering all of the above (NEW)
-- `Makefile` — `make local` target (NEW)
+- `Tests/Sensors.swift` — 118-test suite covering all of the above (NEW)
+- `Makefile` — `make local`, `make uninstall-helper`, `make install-helper` targets (NEW)
 
 Substantial removals from upstream (do NOT re-add):
 - **`Modules/Bluetooth/`** — Bluetooth module deleted.
@@ -115,3 +123,4 @@ When creating a NEW Swift file in this fork, use a minimal header like `//  Crea
 - **Fan curves are ALWAYS enabled** — no master toggle. `ProfileStore.enabled` returns hardcoded `true` (kept for test compatibility). "Disable" semantic = select Apple Auto profile.
 - **Apple-firmware override failsafe is IN-MEMORY only.** `FanCurveController` keeps `appleOverridden: Set<Int>` (+ `lastSetMode`, `overrideStreak`) — never persisted. If Apple's thermal firmware reverts our `.forced` write back to `.automatic` for 3 consecutive ticks, the controller stops issuing SMC writes for that fan id for the rest of the session. Cleared by `.fanProfileChanged` (user picker action) and reset on every app launch. `Store.shared.fanctl_activeProfile` is left untouched so the picker still shows the user's last selection. Per-tick SMC mode refresh lives on `Fan.smcMode` (populated in `SensorsReader.read()`); detection happens at the top of `FanCurveController.tick()` BEFORE the per-fan apply loop so this tick's writes don't bias the comparison.
 - **Profile changes apply immediately.** The `.fanProfileChanged` observer caches `lastSnapshot` per tick, then on user picker action either relinquishes (Apple Auto) or re-ticks (non-Apple) synchronously — no ~1s lag waiting for next reader tick. Pre-existing bug fix: switching to Apple Auto now actually writes `.automatic` to SMC because `relinquishLocked` runs BEFORE `managedFans.removeAll()` (the old order cleared the set then iterated an empty set, leaving fans stuck in `.forced`).
+- **Daemon-driven fan control as of v4.0.0-ank.1.** The helper at `/Library/PrivilegedHelperTools/eu.exelban.Stats.SMC.Helper` is now self-contained: reads sensors via IOReport/IOHID, interpolates the curve via `FanCore` (the shared Swift package compiled into both Stats.app and the helper), writes SMC in-process, persists the active profile at `/Library/Application Support/Stats/active.json`. Stats.app probes `helper.protocolVersion` at launch; if `v2+`, the in-app `FanCurveController` is skipped (cache key `fanctl_daemonMode`). Stats.app can be quit while fans keep being managed (~12 MB resident helper vs ~131 MB Stats.app). Legacy v1 helpers trigger a one-time reinstall NSAlert via `probeHelperAndMaybePromptMigration()` in `AppDelegate`. Apple-firmware override failsafe (3-tick override-streak detector) now lives in `HelperTakeoverStore` (in-memory in the daemon). To roll back: `make uninstall-helper` then `git checkout v3.1.0-ank.1` + `make local`. See `docs/superpowers/specs/2026-06-09-daemon-refactor.md`.

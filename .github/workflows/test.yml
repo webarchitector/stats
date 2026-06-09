@@ -19,13 +19,22 @@ jobs:
           xcodebuild -version
           swift --version
 
+      # Project pins DEVELOPMENT_TEAM=RP2S87B72W + CODE_SIGN_STYLE=Automatic;
+      # CI has no Apple Developer cert. Mirror `make local`: clear the team,
+      # switch to Manual style, disable signing entirely. Without these
+      # overrides, Xcode tries to resolve provisioning for the pinned team
+      # and `xcodebuild build` exits 65 even with CODE_SIGNING_ALLOWED=NO.
       - name: Build
         run: |
           xcodebuild -scheme Stats -configuration Debug \
             -destination 'platform=macOS,arch=arm64' \
             CODE_SIGN_IDENTITY="-" \
+            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM="" \
+            PROVISIONING_PROFILE_SPECIFIER="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
+            ONLY_ACTIVE_ARCH=YES \
             build
 
       - name: Test
@@ -34,6 +43,10 @@ jobs:
             -destination 'platform=macOS,arch=arm64' \
             -only-testing:Tests/SensorsTests \
             CODE_SIGN_IDENTITY="-" \
+            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM="" \
+            PROVISIONING_PROFILE_SPECIFIER="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
+            ONLY_ACTIVE_ARCH=YES \
             test

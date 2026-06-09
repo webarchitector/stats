@@ -293,7 +293,11 @@ public final class FanCurveEngine {
                 overrideStreak[fan.id] = 0
                 continue
             }
-            if smcMode == .automatic {
+            // Any automatic mode counts as a firmware revert — `.automatic` (0)
+            // OR `.auto3` (3). Don't depend on callers collapsing auto3 first;
+            // a raw auto3 here would otherwise freeze the streak and silently
+            // disable the failsafe.
+            if smcMode.isAutomatic {
                 let streak = (overrideStreak[fan.id] ?? 0) + 1
                 if streak >= Self.appleOverrideThreshold {
                     logger.info("Apple firmware overrode fan \(fan.id), relinquishing for this session")

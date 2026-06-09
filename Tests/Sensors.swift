@@ -1651,6 +1651,39 @@ final class SensorsTests: XCTestCase {
         clearProfileStore()
     }
 
+    /// Same as above but firmware reports `.auto3` (raw SMC value 3, an
+    /// automatic mode) instead of `.automatic`. The failsafe must still trip —
+    /// guards against `detectAppleOverridesLocked` matching only `== .automatic`
+    /// and silently freezing the streak when the revert mode is auto3.
+    func testController_appleOverrideDetected_auto3_skipsFurtherWrites() {
+        clearProfileStore()
+        let store = enabledStoreWithCustomProfile(smartLinearProfile)
+        let fake = FakeFanCurveHelper()
+        let c = FanCurveController(helper: fake, store: store)
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0, smcMode: .forced)],
+            temps: [("TC0D", 60)]))
+        XCTAssertEqual(fake.modeCalls.count, 1, "first tick must issue setFanMode(.forced)")
+        for _ in 0..<3 {
+            c.tick(snapshot: makeControllerSnapshot(
+                fans: [makeControllerFan(id: 0, smcMode: .auto3)],
+                temps: [("TC0D", 60)]))
+        }
+        let modesBefore = fake.modeCalls.count
+        let speedsBefore = fake.speedCalls.count
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0, smcMode: .auto3)],
+            temps: [("TC0D", 65)]))
+        c.tick(snapshot: makeControllerSnapshot(
+            fans: [makeControllerFan(id: 0, smcMode: .auto3)],
+            temps: [("TC0D", 70)]))
+        XCTAssertEqual(fake.modeCalls.count, modesBefore,
+            "after auto3 override is detected, no further setFanMode for fan 0")
+        XCTAssertEqual(fake.speedCalls.count, speedsBefore,
+            "after auto3 override is detected, no further setFanSpeed for fan 0")
+        clearProfileStore()
+    }
+
     /// Once override is triggered, a user picker action (`.fanProfileChanged`)
     /// must wipe the quarantine so the controller resumes writing — including
     /// re-issuing the initial `setFanMode(.forced)`.

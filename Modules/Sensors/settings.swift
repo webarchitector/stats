@@ -741,6 +741,10 @@ internal class Settings: NSStackView, Settings_v {
             default: break
             }
             points.sort { $0.tempC < $1.tempC }
+            // Re-sorting reorders the array, but NSTableView still maps rows to
+            // their pre-sort positions until reloaded — without this, the next
+            // cell edit writes to a different point than the one displayed.
+            tableView.reloadData()
             onEdit(points)
         }
     }

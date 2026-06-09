@@ -25,6 +25,13 @@ final class DaemonRunloop {
     private let logger: HelperLogger
     private var timer: DispatchSourceTimer?
     private let queue = DispatchQueue(label: "eu.exelban.Stats.SMC.Helper.tick")
+    /// Engine kill-switch flipped by `setEnabled(_:)` over XPC. When false,
+    /// `tick()` early-returns so the daemon stops issuing SMC writes — the
+    /// caller that flipped it is expected to also call `engine.shutdown()`
+    /// once to relinquish currently-managed fans back to `.automatic`.
+    /// Guarded by `enabledLock`; reads are cheap so we hold it briefly.
+    private var enabled: Bool = true
+    private let enabledLock = NSLock()
 
     init(reader: HelperSensorReader, engine: FanCurveEngine, store: PersistentProfileStore, logger: HelperLogger) {
         self.reader = reader
@@ -47,7 +54,19 @@ final class DaemonRunloop {
         timer = nil
     }
 
+    func setEnabled(_ value: Bool) {
+        enabledLock.lock()
+        enabled = value
+        enabledLock.unlock()
+    }
+
+    func isEnabled() -> Bool {
+        enabledLock.lock(); defer { enabledLock.unlock() }
+        return enabled
+    }
+
     private func tick() {
+        if !isEnabled() { return }
         let activeProfile = store.loadActive()
         engine.setProfiles(store.loadAll())
         engine.setActiveProfile(activeProfile)
@@ -55,8 +74,9 @@ final class DaemonRunloop {
         engine.tick(snapshot: snap)
     }
 
-    /// Re-tick immediately on profile change. Phase 4/5 will expose an XPC
-    /// method that calls this so the user-visible response is instant.
+    /// Re-tick immediately on profile change. Called by Helper's XPC
+    /// `setActiveProfileJSON` / `setOverride` so the user-visible response is
+    /// instant instead of waiting up to ~1s for the next regular tick.
     func applyProfileChange() {
         queue.async { [weak self] in self?.tick() }
     }

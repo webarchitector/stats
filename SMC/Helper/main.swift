@@ -245,6 +245,152 @@ extension Helper {
         process.launch()
         exit(0)
     }
+
+    // MARK: - Phase 4: daemon-aware XPC surface
+
+    func setActiveProfileJSON(_ data: Data, completion: @escaping (String?) -> Void) {
+        guard let store = self.profileStore, let runloop = self.runloop else {
+            completion("engine not booted")
+            return
+        }
+        // Empty payload = clear active (Apple Auto). Anything else must decode
+        // as a single FanProfile.
+        if data.isEmpty {
+            store.setActive(nil)
+            runloop.applyProfileChange()
+            completion(nil)
+            return
+        }
+        do {
+            let profile = try JSONDecoder().decode(FanProfile.self, from: data)
+            store.setActive(profile)
+            runloop.applyProfileChange()
+            completion(nil)
+        } catch {
+            NSLog("setActiveProfileJSON decode error: \(error)")
+            completion("decode error: \(error.localizedDescription)")
+        }
+    }
+
+    func saveProfilesJSON(_ data: Data, completion: @escaping (String?) -> Void) {
+        guard let store = self.profileStore else {
+            completion("engine not booted")
+            return
+        }
+        do {
+            let profiles = try JSONDecoder().decode([FanProfile].self, from: data)
+            store.saveAll(profiles)
+            // Profiles list changed but active stays the same — next tick
+            // picks it up via `store.loadAll()` so no immediate re-tick is
+            // strictly required. Still re-tick so picker latency is uniform
+            // across all profile-mutating XPC calls.
+            self.runloop?.applyProfileChange()
+            completion(nil)
+        } catch {
+            NSLog("saveProfilesJSON decode error: \(error)")
+            completion("decode error: \(error.localizedDescription)")
+        }
+    }
+
+    func setOverride(rawMode: Int, fanId: Int, value: Int, completion: @escaping (String?) -> Void) {
+        guard let kind = OverrideKind(rawValue: rawMode) else {
+            completion("unknown rawMode: \(rawMode)")
+            return
+        }
+        guard let takeover = self.takeoverStore,
+              let writer = self.fanWriter,
+              let reader = self.sensorReader,
+              let store = self.profileStore,
+              let runloop = self.runloop else {
+            completion("engine not booted")
+            return
+        }
+
+        switch kind {
+        case .curve:
+            // Release fan back to the engine. The engine will re-assert
+            // `.forced` on its next tick (immediately, via re-tick below).
+            takeover.setReleased(fan: fanId)
+            runloop.applyProfileChange()
+            completion(nil)
+
+        case .manual, .off, .max:
+            // Mark user takeover so the engine skips this fan, then write
+            // the requested mode+RPM directly. Writes go through the same
+            // `SMCFanWriter` the engine uses so .curve sentinel filtering
+            // and SMC key resolution stay consistent.
+            takeover.setUserTookOver(fan: fanId)
+            writer.setFanMode(id: fanId, mode: FanMode.forced.rawValue)
+            switch kind {
+            case .manual:
+                writer.setFanSpeed(id: fanId, value: value)
+            case .off:
+                writer.setFanSpeed(id: fanId, value: 0)
+            case .max:
+                let snap = reader.read(profile: store.loadActive())
+                if let fan = snap.fans.first(where: { $0.id == fanId }) {
+                    writer.setFanSpeed(id: fanId, value: Int(fan.maxSpeed))
+                } else {
+                    NSLog("setOverride(.max): fan id \(fanId) not in snapshot")
+                }
+            case .curve:
+                break  // unreachable, exhausted above
+            }
+            completion(nil)
+        }
+    }
+
+    func getStatusJSON(completion: @escaping (Data?) -> Void) {
+        guard let reader = self.sensorReader,
+              let store = self.profileStore,
+              let takeover = self.takeoverStore,
+              let engine = self.engine,
+              let runloop = self.runloop else {
+            completion(nil)
+            return
+        }
+        let active = store.loadActive()
+        let snap = reader.read(profile: active)
+        let temp = snap.sensors.first(where: { $0.type == .temperature })?.value
+        let fans = snap.fans.map { fan in
+            HelperStatus.Fan(
+                id: fan.id,
+                minSpeed: fan.minSpeed,
+                maxSpeed: fan.maxSpeed,
+                currentRPM: fan.value,
+                smcMode: fan.smcMode?.rawValue,
+                userTookOver: takeover.userTookOver(fan: fan.id),
+                appleOverridden: engine.isAppleOverridden(fanID: fan.id)
+            )
+        }
+        let status = HelperStatus(
+            protocolVersion: 2,
+            activeProfileID: active?.id.uuidString,
+            engineEnabled: runloop.isEnabled(),
+            currentTemp: temp,
+            fans: fans
+        )
+        completion(try? JSONEncoder().encode(status))
+    }
+
+    func setEnabled(_ enabled: Bool, completion: @escaping (String?) -> Void) {
+        guard let runloop = self.runloop, let engine = self.engine else {
+            completion("engine not booted")
+            return
+        }
+        runloop.setEnabled(enabled)
+        if !enabled {
+            // Relinquish every managed fan immediately so the user isn't
+            // left with the curve's last write standing in SMC.
+            engine.shutdown()
+        } else {
+            // Re-enabled — kick a tick so the engine re-asserts the current
+            // profile against fresh sensor data without waiting for the
+            // periodic timer.
+            runloop.applyProfileChange()
+        }
+        completion(nil)
+    }
 }
 
 // https://github.com/duanefields/VirtualKVM/blob/master/VirtualKVM/CodesignCheck.swift

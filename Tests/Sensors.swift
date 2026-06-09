@@ -1717,4 +1717,71 @@ final class SensorsTests: XCTestCase {
         _ = c
         clearProfileStore()
     }
+
+    // MARK: - OverrideKind (Phase 4 XPC wire type)
+
+    func testOverrideKind_rawValues() {
+        // Pinned: these raw values cross the XPC boundary; changing them
+        // breaks the daemon ABI.
+        XCTAssertEqual(OverrideKind.curve.rawValue, 0)
+        XCTAssertEqual(OverrideKind.manual.rawValue, 1)
+        XCTAssertEqual(OverrideKind.off.rawValue, 2)
+        XCTAssertEqual(OverrideKind.max.rawValue, 3)
+    }
+
+    func testOverrideKind_codableRoundtrip() throws {
+        for kind in [OverrideKind.curve, .manual, .off, .max] {
+            let data = try JSONEncoder().encode(kind)
+            let decoded = try JSONDecoder().decode(OverrideKind.self, from: data)
+            XCTAssertEqual(decoded, kind)
+        }
+    }
+
+    // MARK: - HelperStatus (Phase 4 XPC wire type)
+
+    func testHelperStatus_codableRoundtrip() throws {
+        let status = HelperStatus(
+            protocolVersion: 2,
+            activeProfileID: "AAAA-BBBB-CCCC-DDDD",
+            engineEnabled: true,
+            currentTemp: 42.5,
+            fans: [
+                HelperStatus.Fan(id: 0, minSpeed: 1000, maxSpeed: 7000,
+                                 currentRPM: 2500, smcMode: FanMode.forced.rawValue,
+                                 userTookOver: false, appleOverridden: false),
+                HelperStatus.Fan(id: 1, minSpeed: 1200, maxSpeed: 6800,
+                                 currentRPM: 1800, smcMode: FanMode.automatic.rawValue,
+                                 userTookOver: true, appleOverridden: false)
+            ]
+        )
+        let data = try JSONEncoder().encode(status)
+        let decoded = try JSONDecoder().decode(HelperStatus.self, from: data)
+        XCTAssertEqual(decoded, status)
+        XCTAssertEqual(decoded.fans.count, 2)
+        XCTAssertEqual(decoded.fans[1].userTookOver, true)
+    }
+
+    func testHelperStatus_nullableFieldsRoundtrip() throws {
+        // nil activeProfileID + nil currentTemp + empty fans + nil per-fan
+        // smcMode must all survive a JSON round-trip — the daemon emits this
+        // shape when no profile is active and SMC probes fail.
+        let status = HelperStatus(
+            protocolVersion: 2,
+            activeProfileID: nil,
+            engineEnabled: false,
+            currentTemp: nil,
+            fans: [
+                HelperStatus.Fan(id: 0, minSpeed: 1000, maxSpeed: 7000,
+                                 currentRPM: 0, smcMode: nil,
+                                 userTookOver: false, appleOverridden: true)
+            ]
+        )
+        let data = try JSONEncoder().encode(status)
+        let decoded = try JSONDecoder().decode(HelperStatus.self, from: data)
+        XCTAssertEqual(decoded, status)
+        XCTAssertNil(decoded.activeProfileID)
+        XCTAssertNil(decoded.currentTemp)
+        XCTAssertNil(decoded.fans[0].smcMode)
+        XCTAssertTrue(decoded.fans[0].appleOverridden)
+    }
 }

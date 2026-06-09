@@ -980,9 +980,47 @@ public class SMCHelper {
         guard let helper = self.helper(nil) else { return }
         helper.resetFanControl { _ in }
     }
-    
+
     public func isActive() -> Bool {
         return self.connection != nil
+    }
+
+    // MARK: - Phase 4 daemon-aware surface
+    //
+    // These mirror the new XPC methods on `HelperProtocol`. All five accept a
+    // completion handler with an optional string so the caller can surface
+    // helper-side errors. The legacy `setFanMode` / `setFanSpeed` /
+    // `resetFanControl` methods above stay in place for the app's fallback
+    // path while Phase 5 cuts the in-app controller over to the daemon.
+
+    public func protocolVersion(_ done: @escaping (Int) -> Void) {
+        guard let helper = self.helper(nil) else { done(0); return }
+        helper.protocolVersion(completion: done)
+    }
+
+    public func setActiveProfileJSON(_ data: Data, _ done: @escaping (String?) -> Void) {
+        guard let helper = self.helper(nil) else { done("no connection"); return }
+        helper.setActiveProfileJSON(data, completion: done)
+    }
+
+    public func saveProfilesJSON(_ data: Data, _ done: @escaping (String?) -> Void) {
+        guard let helper = self.helper(nil) else { done("no connection"); return }
+        helper.saveProfilesJSON(data, completion: done)
+    }
+
+    public func setOverride(rawMode: Int, fanId: Int, value: Int = 0, _ done: @escaping (String?) -> Void) {
+        guard let helper = self.helper(nil) else { done("no connection"); return }
+        helper.setOverride(rawMode: rawMode, fanId: fanId, value: value, completion: done)
+    }
+
+    public func getStatusJSON(_ done: @escaping (Data?) -> Void) {
+        guard let helper = self.helper(nil) else { done(nil); return }
+        helper.getStatusJSON(completion: done)
+    }
+
+    public func setEnabled(_ enabled: Bool, _ done: @escaping (String?) -> Void) {
+        guard let helper = self.helper(nil) else { done("no connection"); return }
+        helper.setEnabled(enabled, completion: done)
     }
     
     public func checkForUpdate() {

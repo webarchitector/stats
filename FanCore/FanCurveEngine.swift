@@ -98,6 +98,15 @@ public final class FanCurveEngine {
         stateLock.unlock()
     }
 
+    /// Read-only probe for the daemon's status reporter (Phase 4). True when
+    /// the Apple-firmware override failsafe has quarantined this fan for the
+    /// session — i.e. we last wrote `.forced` but SMC kept reverting to
+    /// `.automatic` 3 ticks in a row.
+    public func isAppleOverridden(fanID: Int) -> Bool {
+        stateLock.lock(); defer { stateLock.unlock() }
+        return appleOverridden.contains(fanID)
+    }
+
     /// Called by the caller's `.fanProfileChanged` observer (app side) or the
     /// equivalent profile-update notification on the daemon side. Wipes
     /// per-tick smoothing/hysteresis state so the new profile's first

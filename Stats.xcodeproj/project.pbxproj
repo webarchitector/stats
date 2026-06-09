@@ -78,6 +78,7 @@
 		6418FD6DC652510530CD8F48 /* SMCFanWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69ED90F295E389468A7FBB25 /* SMCFanWriter.swift */; };
 		67490ED3F94D87DCE74E4C87 /* FanProfileBuiltins.swift in Sources */ = {isa = PBXBuildFile; fileRef = C08E9EA01827C2A7631D3A84 /* FanProfileBuiltins.swift */; };
 		675CB861836703C56125B88E /* Memory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FED240580B33FFEF0F19096 /* Memory.swift */; };
+		6D3736DF73952611A635C5B8 /* HelperStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9520411F69F82CCDBB141626 /* HelperStatus.swift */; };
 		76CD44A9FBE572399A81D1EB /* TakeoverStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A4A3830172034E83028A1DF /* TakeoverStore.swift */; };
 		9336CC8F064313894EBAD737 /* HelperSensorReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = D739B04177BE38871CEABEE5 /* HelperSensorReader.swift */; };
 		97AAC06C9D97A0F712F79DD7 /* FanCoreClock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 651D920E612C9B81D8586E18 /* FanCoreClock.swift */; };
@@ -178,6 +179,7 @@
 		9AF9EE0A24648751005D2270 /* Disk.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9AF9EE0224648751005D2270 /* Disk.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		9AF9EE0F2464875F005D2270 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AF9EE0E2464875F005D2270 /* main.swift */; };
 		9AF9EE1124648ADC005D2270 /* readers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AF9EE1024648ADC005D2270 /* readers.swift */; };
+		9D9C5C2276EF9B13D87431FF /* HelperStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9520411F69F82CCDBB141626 /* HelperStatus.swift */; };
 		A2EB2A15B04E4D0E87F7A72A /* BarChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DE8F91C37CE003CC79E988C /* BarChart.swift */; };
 		A4F5347947AD4C4D6021A568 /* Stack.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3AAC1FE992EE74A4AE15281 /* Stack.swift */; };
 		A61A66C291037E234D383AF5 /* Types.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21C37A02904455D7F1D83D7F /* Types.swift */; };
@@ -505,6 +507,7 @@
 		74618DB52EA980FA2009F8F9 /* reader.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = reader.m; sourceTree = "<group>"; };
 		7A19DAE52552C326001B192F /* fr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = fr; path = fr.lproj/Localizable.strings; sourceTree = "<group>"; };
 		9068FE5F25AC4516006FCAA6 /* cs */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = cs; path = cs.lproj/Localizable.strings; sourceTree = "<group>"; };
+		9520411F69F82CCDBB141626 /* HelperStatus.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HelperStatus.swift; sourceTree = "<group>"; };
 		9585D8482830523E007EC0D7 /* sl */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = sl; path = sl.lproj/Localizable.strings; sourceTree = "<group>"; };
 		9733417025C7340700BD4D9C /* ro */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ro; path = ro.lproj/Localizable.strings; sourceTree = "<group>"; };
 		97B5592A24FD84E000D3C4FF /* tr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = tr; path = tr.lproj/Localizable.strings; sourceTree = "<group>"; };
@@ -1155,6 +1158,7 @@
 				3A4A3830172034E83028A1DF /* TakeoverStore.swift */,
 				19B9C2E6ADF95B22763070DD /* FanCurveHelperProtocol.swift */,
 				BFDACA5A12A05068589823D3 /* FanCurveEngine.swift */,
+				9520411F69F82CCDBB141626 /* HelperStatus.swift */,
 			);
 			name = FanCore;
 			path = FanCore;
@@ -1812,6 +1816,7 @@
 				AD7D8113A06B965F31684A28 /* HelperTakeoverStore.swift in Sources */,
 				5ADB4353A6A72AF58CAD430E /* HelperLogger.swift in Sources */,
 				537BB621595CCECC78F68DF4 /* DaemonRunloop.swift in Sources */,
+				6D3736DF73952611A635C5B8 /* HelperStatus.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1998,6 +2003,7 @@
 				76CD44A9FBE572399A81D1EB /* TakeoverStore.swift in Sources */,
 				D89B7CECBEAFE6E16485B0E3 /* FanCurveHelperProtocol.swift in Sources */,
 				DE8037D178FF788853CA08FC /* FanCurveEngine.swift in Sources */,
+				9D9C5C2276EF9B13D87431FF /* HelperStatus.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

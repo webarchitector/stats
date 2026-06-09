@@ -143,6 +143,8 @@ internal class Popup: PopupWrapper {
             }
         }
         
+        self.addArrangedSubview(self.quitView())
+
         if !reload {
             self.sensors = values
         }
@@ -150,6 +152,35 @@ internal class Popup: PopupWrapper {
             self.buildSensorSettingsSections()
         }
         self.recalculateHeight()
+    }
+
+    private func quitView() -> NSView {
+        let row: NSView = NSView(frame: NSRect(x: 0, y: 0, width: self.frame.width, height: 22))
+        row.widthAnchor.constraint(equalToConstant: row.frame.width).isActive = true
+        row.heightAnchor.constraint(equalToConstant: row.bounds.height).isActive = true
+
+        let separator = NSBox(frame: NSRect(x: 0, y: row.frame.height - 1, width: row.frame.width, height: 1))
+        separator.boxType = .separator
+        separator.autoresizingMask = [.width]
+        row.addSubview(separator)
+
+        let button: NSButton = NSButton(title: localizedString("Quit Stats"), target: self, action: #selector(self.quitClicked))
+        button.isBordered = false
+        button.font = NSFont.systemFont(ofSize: 11, weight: .regular)
+        button.contentTintColor = .secondaryLabelColor
+        button.translatesAutoresizingMaskIntoConstraints = false
+        row.addSubview(button)
+
+        NSLayoutConstraint.activate([
+            button.trailingAnchor.constraint(equalTo: row.trailingAnchor, constant: -4),
+            button.centerYAnchor.constraint(equalTo: row.centerYAnchor, constant: 1)
+        ])
+
+        return row
+    }
+
+    @objc private func quitClicked() {
+        NSApp.terminate(self)
     }
     
     internal func usageCallback(_ values: [Sensor_p]) {

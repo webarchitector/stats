@@ -6,18 +6,31 @@ Personal fork of `exelban/stats` extended with **Fan Curve Control** (see `docs/
 
 Key modified files relative to upstream:
 - `SMC/smc.swift` — `FanMode.curve = 100` case + `isStatsControlled` (Stats-internal marker, never written to SMC)
-- `Modules/Sensors/values.swift` — `CurvePoint`, `DriverSensor`, `FanProfile` value types
-- `Modules/Sensors/fanCurve.swift` — `FanCurve.interpolate`, `FanCurve.effectiveTemperature`, `FanProfile.builtIns`, `FanProfile.appleAutoID` (stable UUID) (NEW)
+- `Modules/Sensors/values.swift` — `CurvePoint`, `DriverSensor`, `FanProfile` value types; `Fan.smcMode` (per-tick SMC refresh)
+- `Modules/Sensors/fanCurve.swift` — `FanCurve.interpolate`, `FanCurve.effectiveTemperature`, `FanProfile.builtIns` (6 profiles: Apple Auto / Quiet / Linear / Balanced / Aggressive / Performance), `FanProfile.appleAutoID` (stable UUID) (NEW)
 - `Modules/Sensors/profileStore.swift` — persistence (`fanctl_profiles`, `fanctl_activeProfile` in Store). `enabled` is hard-coded true (no user toggle) (NEW)
-- `Modules/Sensors/fanController.swift` — `FanCurveController` (NSLock-guarded state, runs from background `SensorsReader` thread), `FanCurveHelper` protocol, `SMCHelperAdapter` (NEW)
-- `Modules/Sensors/curveGraph.swift` — mini graph NSView (NEW)
-- `Modules/Sensors/settings.swift` — Fan Curves editor (drivers, points, graph, offset, advanced + Duplicate/Delete). **Active profile picker lives in popup, not Settings.**
-- `Modules/Sensors/main.swift` — wires controller into module lifecycle (init bootstrap, reader callback, willTerminate, crash recovery)
-- `Modules/Sensors/popup.swift` — single `ModeButtons` NSPopUpButton with profiles + Manual/Off/Max; predicates exclude `.curve` from raw SMC forwarding
+- `Modules/Sensors/fanController.swift` — `FanCurveController` (NSLock-guarded state, runs from background `SensorsReader` thread), `FanCurveHelper` protocol, `SMCHelperAdapter`, smart-fan features (3-sample median smoothing, derivative pre-ramp, battery hot floor), helper-disappear cleanup, Apple-firmware override failsafe, immediate profile-change apply, `FanControllerClock` for tests (NEW)
+- `Modules/Sensors/readers.swift` — per-tick SMC mode probe into `Fan.smcMode` (~1ms/fan/tick) for override detection
+- `Modules/Sensors/curveGraph.swift` — fan curve graph NSView (320×220 with axes, gridlines, filled curve) (NEW)
+- `Modules/Sensors/settings.swift` — Fan Curves editor as stacked `PreferencesSection`s: Fan curve / Points / Driver sensors / Advanced / action bar. **Active profile picker lives in popup, not Settings.**
+- `Modules/Sensors/main.swift` — wires controller into module lifecycle (init bootstrap, reader callback, `disable()` override, `willTerminate`, crash recovery via `resetStaleCurveModes`)
+- `Modules/Sensors/popup.swift` — single `ModeButtons` NSPopUpButton with profiles + Manual/Off/Max; `lastActionTag` (Store-backed) persists most-recent picker selection across restarts; predicates exclude `.curve` from raw SMC forwarding
 - `SMC/main.swift` — CLI rejects writing `mode=100` to SMC
 - `Kit/types.swift` — `.fanProfileChanged` notification name
-- `Tests/Sensors.swift` — 78-test suite covering all of the above (NEW)
+- `Kit/module/module.swift` — `enable()` / `disable()` made `open` so `Sensors` can override `disable()` for controller cleanup
+- `Stats/AppDelegate.swift` — `anotherInstanceIsRunning()` single-instance guard (PID tiebreak, newer-wins, force-terminate older peer)
+- `Stats/Supporting Files/Info.plist` — `LSMultipleInstancesProhibited` + relaxed `SMPrivilegedExecutables` (identifier-only)
+- `.github/workflows/test.yml` — CI build+test with signing-team overrides and PIPESTATUS diagnostic block (NEW)
+- `Tests/Sensors.swift` — 111-test suite covering all of the above (NEW)
 - `Makefile` — `make local` target (NEW)
+
+Substantial removals from upstream (do NOT re-add):
+- **`Modules/Bluetooth/`** — Bluetooth module deleted.
+- **`Modules/Remote/`** — Remote-control module deleted.
+- **`SystemStats/`** — cloud-sync framework deleted.
+- **`Updater/`** — auto-updater + Sparkle integration deleted; manual reinstall via `make local`.
+- **`Widgets/` (top-level WidgetsExtension)** — deleted (macOS 27 Spotlight donation retry loop, ~10 errors/sec). `Kit/Widgets/` (menubar widget renderers) is unrelated and stays.
+- **LevelDB sensor history backend** — deleted; only in-memory rolling buffers remain.
 
 ## Codebase Index
 

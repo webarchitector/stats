@@ -10,6 +10,7 @@
 //
 
 #import <Foundation/Foundation.h>
+#import <os/lock.h>
 #import "bridge.h"
 
 // macOS 27 logs every short-lived IOHIDEventSystemClient under
@@ -18,13 +19,22 @@
 // events/min of pure log noise. Cache the client for the lifetime of the
 // daemon; matching is reset per call (cheap).
 static IOHIDEventSystemClientRef sharedHIDClient = NULL;
-static dispatch_once_t sharedHIDClientOnce;
+static os_unfair_lock sharedHIDClientLock = OS_UNFAIR_LOCK_INIT;
 
 static IOHIDEventSystemClientRef getSharedHIDClient(void) {
-    dispatch_once(&sharedHIDClientOnce, ^{
+    // Lazy init WITHOUT dispatch_once: if the first create returns NULL (HID
+    // not yet available when launchd starts the daemon very early at boot),
+    // dispatch_once would cache NULL for the whole process lifetime and HID
+    // temperatures would never resolve until a restart. Retry on each call
+    // until creation succeeds. The lock keeps it self-contained even though
+    // callers already serialize on HelperSensorReader's accessQueue.
+    os_unfair_lock_lock(&sharedHIDClientLock);
+    if (sharedHIDClient == NULL) {
         sharedHIDClient = IOHIDEventSystemClientCreate(kCFAllocatorDefault);
-    });
-    return sharedHIDClient;
+    }
+    IOHIDEventSystemClientRef client = sharedHIDClient;
+    os_unfair_lock_unlock(&sharedHIDClientLock);
+    return client;
 }
 
 NSDictionary*AppleSiliconSensors(int32_t page, int32_t usage, int32_t type) {

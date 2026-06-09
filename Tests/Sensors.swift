@@ -586,6 +586,36 @@ final class SensorsTests: XCTestCase {
         clearProfileStore()
     }
 
+    // MARK: - duplicateProfile
+
+    func testProfileStore_duplicateAppleAuto_seedsExamplePoints() {
+        clearProfileStore()
+        let store = ProfileStore.shared
+        store.bootstrapIfNeeded(fanCount: 1, defaultMaxRPM: 7000)
+        let appleAuto = store.loadProfiles().first(where: { $0.id == FanProfile.appleAutoID })!
+        XCTAssertTrue(appleAuto.points.isEmpty, "precondition: Apple Auto has no points")
+        let copy = store.duplicateProfile(appleAuto)
+        XCTAssertFalse(copy.points.isEmpty, "duplicate of Apple Auto should not be empty")
+        XCTAssertFalse(copy.drivers.isEmpty, "duplicate of Apple Auto should have default drivers")
+        XCTAssertFalse(copy.isBuiltIn, "duplicate should be editable")
+        XCTAssertNotEqual(copy.id, appleAuto.id, "duplicate must get a fresh ID")
+        XCTAssertEqual(store.activeProfileID, copy.id, "duplicate should become active")
+        clearProfileStore()
+    }
+
+    func testProfileStore_duplicateNonEmpty_copiesPointsAsIs() {
+        clearProfileStore()
+        let store = ProfileStore.shared
+        store.bootstrapIfNeeded(fanCount: 1, defaultMaxRPM: 7000)
+        let balanced = store.loadProfiles().first(where: { $0.name == "Balanced" })!
+        let copy = store.duplicateProfile(balanced)
+        XCTAssertEqual(copy.points, balanced.points, "non-empty source should copy points verbatim")
+        XCTAssertEqual(copy.drivers, balanced.drivers)
+        XCTAssertEqual(copy.name, "Balanced (copy)")
+        XCTAssertFalse(copy.isBuiltIn)
+        clearProfileStore()
+    }
+
     // MARK: - FakeFanCurveHelper baseline
 
     func testFakeHelper_recordsSetFanModeCalls() {

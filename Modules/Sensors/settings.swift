@@ -131,7 +131,7 @@ internal class Settings: NSStackView, Settings_v {
         graphSection.add(graph)
         curveContainer.addArrangedSubview(graphSection)
 
-        // ─── Points table with inline +/− next to the header ───
+        // ─── Points table with labelled add/remove buttons below ───
         let table = NSTableView()
         let tempCol = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("temp"))
         tempCol.title = localizedString("Temp °C")
@@ -143,6 +143,7 @@ internal class Settings: NSStackView, Settings_v {
         table.addTableColumn(rpmCol)
         table.dataSource = self.pointsDataSource
         table.delegate = self.pointsDataSource
+        table.usesAlternatingRowBackgroundColors = true
         self.pointsDataSource.onEdit = { [weak self] _ in
             self?.persistCurveEdits()
         }
@@ -150,22 +151,29 @@ internal class Settings: NSStackView, Settings_v {
         scroll.documentView = table
         scroll.hasVerticalScroller = true
         scroll.translatesAutoresizingMaskIntoConstraints = false
-        scroll.heightAnchor.constraint(equalToConstant: 160).isActive = true
+        // 200pt fits a typical 7-9 point curve without scrolling
+        // (header ~17pt + ~20pt per row).
+        scroll.heightAnchor.constraint(equalToConstant: 200).isActive = true
         self.pointsTable = table
 
-        let addBtn = NSButton(title: "+", target: self, action: #selector(self.addPoint))
-        let removeBtn = NSButton(title: "−", target: self, action: #selector(self.removePoint))
-        addBtn.bezelStyle = .roundRect
-        removeBtn.bezelStyle = .roundRect
+        // Use named labels (not just "+"/"−") so the affordance is obvious.
+        let addBtn = NSButton(title: "+ " + localizedString("Add point"),
+                              target: self, action: #selector(self.addPoint))
+        let removeBtn = NSButton(title: "− " + localizedString("Remove"),
+                                 target: self, action: #selector(self.removePoint))
+        addBtn.bezelStyle = .rounded
+        removeBtn.bezelStyle = .rounded
+        addBtn.controlSize = .small
+        removeBtn.controlSize = .small
         addBtn.toolTip = localizedString("Add point")
         removeBtn.toolTip = localizedString("Remove selected point")
-        let pointsHeader = NSStackView(views: [addBtn, removeBtn])
-        pointsHeader.orientation = .horizontal
-        pointsHeader.spacing = 6
+        let pointsButtons = NSStackView(views: [addBtn, removeBtn, NSView()])
+        pointsButtons.orientation = .horizontal
+        pointsButtons.spacing = 6
 
         let pointsSection = PreferencesSection(title: localizedString("Points"))
-        pointsSection.add(PreferencesRow(nil, component: pointsHeader))
         pointsSection.add(scroll)
+        pointsSection.add(PreferencesRow(nil, component: pointsButtons))
         curveContainer.addArrangedSubview(pointsSection)
 
         // ─── Driver sensors ───
@@ -224,18 +232,28 @@ internal class Settings: NSStackView, Settings_v {
         advancedSection.add(PreferencesRow(localizedString("RPM apply threshold"), component: thresh))
         curveContainer.addArrangedSubview(advancedSection)
 
-        // ─── Bottom action bar (Duplicate / Delete) ───
+        // ─── Bottom action bar ───
+        // Duplicate is the primary action (most common: "fork a built-in,
+        // then tweak") so it gets the recommended bezel + return key.
+        // Delete is destructive and unavailable for built-ins; render it
+        // borderless to de-emphasise.
         let duplicateBtn = NSButton(title: localizedString("Duplicate"),
                                     target: self,
                                     action: #selector(self.duplicateProfile))
+        duplicateBtn.bezelStyle = .rounded
+        duplicateBtn.keyEquivalent = "\r"
         let deleteBtn = NSButton(title: localizedString("Delete"),
                                  target: self,
                                  action: #selector(self.deleteProfile))
+        deleteBtn.bezelStyle = .rounded
+        if #available(macOS 11.0, *) {
+            deleteBtn.hasDestructiveAction = true
+        }
         self.deleteBtn = deleteBtn
         deleteBtn.isEnabled = !(ProfileStore.shared.activeProfile()?.isBuiltIn ?? true)
         let spacer = NSView()
         spacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
-        let buttonRow = NSStackView(views: [spacer, duplicateBtn, deleteBtn])
+        let buttonRow = NSStackView(views: [deleteBtn, spacer, duplicateBtn])
         buttonRow.orientation = .horizontal
         buttonRow.spacing = 8
         let actionSection = PreferencesSection()
@@ -490,16 +508,13 @@ internal class Settings: NSStackView, Settings_v {
     }
 
     @objc private func duplicateProfile() {
-        var profiles = ProfileStore.shared.loadProfiles()
-        guard let activeID = ProfileStore.shared.activeProfileID,
-              let original = profiles.first(where: { $0.id == activeID }) else { return }
-        var copy = original
-        copy.id = UUID()
-        copy.name = original.name + " (copy)"
-        copy.isBuiltIn = false
-        profiles.append(copy)
-        ProfileStore.shared.saveProfiles(profiles)
-        ProfileStore.shared.activeProfileID = copy.id
+        guard let original = ProfileStore.shared.activeProfile() else { return }
+        let fans = self.list.compactMap({ $0 as? Fan })
+        let fanCount = max(1, fans.count)
+        let defaultMaxRPM = Int(fans.map(\.maxSpeed).max() ?? 7000)
+        _ = ProfileStore.shared.duplicateProfile(original,
+                                                 fanCount: fanCount,
+                                                 defaultMaxRPM: defaultMaxRPM)
         self.reloadProfilePicker()
         self.refreshCurveEditor()
         NotificationCenter.default.post(name: .fanProfileChanged, object: nil)

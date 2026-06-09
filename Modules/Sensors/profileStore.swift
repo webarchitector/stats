@@ -50,6 +50,40 @@ public final class ProfileStore {
         guard let id = activeProfileID else { return nil }
         return loadProfiles().first { $0.id == id }
     }
+
+    /// Duplicates `source` into a new editable profile, persists it, and makes
+    /// it the active profile. Returns the freshly created copy.
+    ///
+    /// Apple Auto carries an empty `points` array (the firmware-fallback
+    /// semantic) — duplicating it as-is would give the user a curveless
+    /// profile to start from, which is hostile. Instead, when the source has
+    /// no points we seed from the built-in Balanced profile so the user has
+    /// a sensible curve to tweak. Drivers follow the same fallback.
+    @discardableResult
+    public func duplicateProfile(_ source: FanProfile,
+                                 fanCount: Int = 1,
+                                 defaultMaxRPM: Int = 7000) -> FanProfile {
+        var copy = source
+        copy.id = UUID()
+        copy.isBuiltIn = false
+        copy.name = source.name + " (copy)"
+        if copy.points.isEmpty || copy.drivers.isEmpty {
+            let builtIns = FanProfile.builtIns(fanCount: fanCount,
+                                               defaultMaxRPM: defaultMaxRPM)
+            let example = builtIns.first(where: { $0.name == "Balanced" })
+            if copy.points.isEmpty, let pts = example?.points {
+                copy.points = pts
+            }
+            if copy.drivers.isEmpty, let drv = example?.drivers {
+                copy.drivers = drv
+            }
+        }
+        var profiles = loadProfiles()
+        profiles.append(copy)
+        saveProfiles(profiles)
+        activeProfileID = copy.id
+        return copy
+    }
 }
 
 extension ProfileStore {

@@ -18,7 +18,7 @@ public extension NSToolbarItem.Identifier {
 }
 
 class SettingsWindow: NSWindow, NSWindowDelegate, NSToolbarDelegate {
-    private static let size: CGSize = CGSize(width: 720, height: 480)
+    private static let size: CGSize = CGSize(width: 960, height: 480)
     private static let frameAutosaveName = "eu.exelban.Stats.Settings.WindowFrame"
     
     internal var onClose: (() -> Void)?
@@ -62,7 +62,7 @@ class SettingsWindow: NSWindow, NSWindowDelegate, NSToolbarDelegate {
         sidebarViewController.addSplitViewItem(sidebarItem)
         sidebarViewController.addSplitViewItem(contentItem)
         
-        contentItem.minimumThickness = 540
+        contentItem.minimumThickness = 780
         
         let newToolbar = NSToolbar(identifier: "eu.exelban.Stats.Settings.Toolbar")
         newToolbar.allowsUserCustomization = false

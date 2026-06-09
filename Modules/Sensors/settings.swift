@@ -129,7 +129,8 @@ internal class Settings: NSStackView, Settings_v {
 
         let graphSection = PreferencesSection(title: localizedString("Fan curve"))
         graphSection.add(graph)
-        curveContainer.addArrangedSubview(graphSection)
+        graphSection.translatesAutoresizingMaskIntoConstraints = false
+        graphSection.widthAnchor.constraint(equalToConstant: 320).isActive = true
 
         // ─── Points table with labelled add/remove buttons below ───
         let table = NSTableView()
@@ -174,7 +175,8 @@ internal class Settings: NSStackView, Settings_v {
         let pointsSection = PreferencesSection(title: localizedString("Points"))
         pointsSection.add(scroll)
         pointsSection.add(PreferencesRow(nil, component: pointsButtons))
-        curveContainer.addArrangedSubview(pointsSection)
+        pointsSection.translatesAutoresizingMaskIntoConstraints = false
+        pointsSection.widthAnchor.constraint(equalToConstant: 220).isActive = true
 
         // ─── Driver sensors ───
         let driversTableView = NSTableView()
@@ -198,7 +200,21 @@ internal class Settings: NSStackView, Settings_v {
             title: localizedString("Driver sensors (max of)")
         )
         driversSection.add(driverScroll)
-        curveContainer.addArrangedSubview(driversSection)
+        driversSection.translatesAutoresizingMaskIntoConstraints = false
+        driversSection.widthAnchor.constraint(equalToConstant: 220).isActive = true
+
+        // Three-column row: Fan curve / Points / Drivers side by side.
+        // Advanced + action bar remain full-width rows below.
+        // Trailing spacer absorbs leftover horizontal space so NSStackView
+        // doesn't try to stretch the fixed-width columns.
+        let topSpacer = NSView()
+        topSpacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        let topRow = NSStackView(views: [graphSection, pointsSection, driversSection, topSpacer])
+        topRow.orientation = .horizontal
+        topRow.alignment = .top
+        topRow.distribution = .fill
+        topRow.spacing = 12
+        curveContainer.addArrangedSubview(topRow)
 
         // ─── Advanced: offset, hysteresis, threshold ───
         let offset = NSTextField()

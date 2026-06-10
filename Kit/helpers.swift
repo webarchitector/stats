@@ -1058,48 +1058,63 @@ public class SMCHelper {
     }
     
     public func install(completion: @escaping (_ installed: Bool) -> Void) {
+        // `AuthorizationCreate` with `.interactionAllowed` presents the admin-
+        // password dialog and BLOCKS the calling thread until the user responds;
+        // `SMJobBless` is synchronous too. Callers invoke this from the main
+        // thread (migration prompt, settings button), so running it inline froze
+        // the UI run loop for the whole auth round-trip — macOS filed "Slow
+        // response to HID event" spin reports. Run the blocking work off the
+        // main thread (the SecurityAgent dialog is shown by a separate process,
+        // so the main run loop need not block) and deliver completion on main
+        // for the UI-side callers.
+        DispatchQueue.global(qos: .userInitiated).async {
+            let installed = self.blessHelper()
+            DispatchQueue.main.async { completion(installed) }
+        }
+    }
+
+    /// Synchronous SMJobBless install. MUST run off the main thread —
+    /// `AuthorizationCreate(.interactionAllowed)` blocks on the auth UI.
+    private func blessHelper() -> Bool {
         var authRef: AuthorizationRef?
         var authStatus = AuthorizationCreate(nil, nil, [.preAuthorize], &authRef)
-        
+
         guard authStatus == errAuthorizationSuccess else {
             print("Unable to get a valid empty authorization reference to load Helper daemon")
-            completion(false)
-            return
+            return false
         }
-        
+
         let authItem = kSMRightBlessPrivilegedHelper.withCString { authorizationString in
             AuthorizationItem(name: authorizationString, valueLength: 0, value: nil, flags: 0)
         }
-        
+
         let pointer = UnsafeMutablePointer<AuthorizationItem>.allocate(capacity: 1)
         pointer.initialize(to: authItem)
-        
+
         defer {
             pointer.deinitialize(count: 1)
             pointer.deallocate()
         }
-        
+
         var authRights = AuthorizationRights(count: 1, items: pointer)
-        
+
         let flags: AuthorizationFlags = [.interactionAllowed, .extendRights, .preAuthorize]
         authStatus = AuthorizationCreate(&authRights, nil, flags, &authRef)
-        
+
         guard authStatus == errAuthorizationSuccess else {
             print("Unable to get a valid loading authorization reference to load Helper daemon")
-            completion(false)
-            return
+            return false
         }
-        
+
         var error: Unmanaged<CFError>?
         if SMJobBless(kSMDomainSystemLaunchd, "eu.exelban.Stats.SMC.Helper" as CFString, authRef, &error) == false {
             let blessError = error!.takeRetainedValue() as Error
             print("Error while installing the Helper: \(blessError.localizedDescription)")
-            completion(false)
-            return
+            return false
         }
-        
+
         AuthorizationFree(authRef!, [])
-        completion(true)
+        return true
     }
     
     private func helperConnection() -> NSXPCConnection? {

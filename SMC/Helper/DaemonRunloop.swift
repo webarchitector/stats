@@ -4,7 +4,7 @@
 //
 //  Created on 2026-06-09.
 //
-//  Owns the 1-second DispatchSourceTimer that drives `FanCurveEngine` from
+//  Owns the 5-second DispatchSourceTimer that drives `FanCurveEngine` from
 //  the daemon side. Each tick:
 //    1. reload profiles from disk (the app may have written new ones since
 //       last tick — Phase 5 wires that path),
@@ -42,7 +42,10 @@ final class DaemonRunloop {
 
     func start() {
         let t = DispatchSource.makeTimerSource(queue: queue)
-        t.schedule(deadline: .now() + .seconds(1), repeating: .seconds(1))
+        // 5s cadence: low overhead, and the engine's windows (16s/12s, set in
+        // bootEngine) are sized to retain enough samples at this spacing. First
+        // tick fires after 1s so fans are taken over promptly on (re)launch.
+        t.schedule(deadline: .now() + .seconds(1), repeating: .seconds(5))
         t.setEventHandler { [weak self] in self?.tick() }
         timer = t
         t.resume()

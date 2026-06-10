@@ -91,7 +91,11 @@ class Helper: NSObject, NSXPCListenerDelegate, HelperProtocol {
         let writer = SMCFanWriter(accessQueue: smcAccess)
         let reader = HelperSensorReader(accessQueue: smcAccess)
         let clock = SystemFanCoreClock()
-        let engine = FanCurveEngine(helper: writer, takeover: takeover, clock: clock, logger: logger)
+        // Daemon ticks every 5s (see DaemonRunloop), so widen the engine's
+        // sample/derivative windows to keep ≥3 samples for the median and ≥2
+        // for the rising-temp derivative at that cadence.
+        let engine = FanCurveEngine(helper: writer, takeover: takeover, clock: clock, logger: logger,
+                                    sampleWindowSeconds: 16, derivativeWindowSeconds: 12)
         let runloop = DaemonRunloop(reader: reader, engine: engine, store: store, logger: logger)
 
         self.profileStore = store

@@ -32,8 +32,14 @@ public final class FanCurveEngine {
     /// each tick. Reset on profile change / sleep / wake / relinquish so a
     /// stale sample can never bias a fresh session's first decision.
     private var tempSamples: [(ts: Date, temp: Double)] = []
-    private static let sampleWindowSeconds: TimeInterval = 5.0
-    private static let derivativeWindowSeconds: TimeInterval = 2.0
+    // Tunable per instance because tick cadence differs: the daemon ticks every
+    // 5s, the in-app controller ~1s. Defaults suit ~1s ticks; the daemon passes
+    // wider windows so the 3-sample median and the derivative pre-ramp still see
+    // enough samples at its slower cadence. The derivative is a rate (°C/s), so
+    // the threshold below is cadence-independent and stays a shared constant —
+    // a sustained rise yields the same rate whether sampled over 2s or 10s.
+    private let sampleWindowSeconds: TimeInterval
+    private let derivativeWindowSeconds: TimeInterval
     private static let derivativeThresholdCPerSec: Double = 2.0
     private static let derivativeBonusRPM: Int = 500
 
@@ -77,11 +83,15 @@ public final class FanCurveEngine {
     public init(helper: FanCurveHelper,
                 takeover: TakeoverStore,
                 clock: FanCoreClock = SystemFanCoreClock(),
-                logger: FanCoreLogger = NoopFanCoreLogger()) {
+                logger: FanCoreLogger = NoopFanCoreLogger(),
+                sampleWindowSeconds: TimeInterval = 5.0,
+                derivativeWindowSeconds: TimeInterval = 2.0) {
         self.helper = helper
         self.takeover = takeover
         self.clock = clock
         self.logger = logger
+        self.sampleWindowSeconds = sampleWindowSeconds
+        self.derivativeWindowSeconds = derivativeWindowSeconds
     }
 
     // MARK: - External plumbing inputs
@@ -216,7 +226,7 @@ public final class FanCurveEngine {
 
         let now = clock.now()
         tempSamples.append((ts: now, temp: effTemp))
-        tempSamples.removeAll(where: { now.timeIntervalSince($0.ts) > Self.sampleWindowSeconds })
+        tempSamples.removeAll(where: { now.timeIntervalSince($0.ts) > self.sampleWindowSeconds })
         // Median of the last (up to) 3 in-window samples — kills single-tick
         // HID jitter spikes that would otherwise bounce fans up/down.
         let smoothedTemp = Self.median(tempSamples.suffix(3).map(\.temp))
@@ -245,7 +255,7 @@ public final class FanCurveEngine {
     /// dT/dt over the most recent `derivativeWindowSeconds` of samples.
     /// Returns 0 if fewer than 2 samples or zero elapsed time.
     private func computeDerivative(now: Date) -> Double {
-        let cutoff = now.addingTimeInterval(-Self.derivativeWindowSeconds)
+        let cutoff = now.addingTimeInterval(-self.derivativeWindowSeconds)
         let recent = tempSamples.filter { $0.ts >= cutoff }
         guard let first = recent.first, let last = recent.last, first.ts != last.ts else { return 0 }
         let dt = last.ts.timeIntervalSince(first.ts)

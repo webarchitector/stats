@@ -89,7 +89,7 @@ class Helper: NSObject, NSXPCListenerDelegate, HelperProtocol {
         // `SMC.shared` connection.
         let smcAccess = DispatchQueue(label: "eu.exelban.Stats.SMC.Helper.smcAccess")
         let writer = SMCFanWriter(accessQueue: smcAccess)
-        let reader = HelperSensorReader(accessQueue: smcAccess)
+        let reader = HelperSensorReader(accessQueue: smcAccess, takeover: takeover)
         let clock = SystemFanCoreClock()
         // Daemon ticks every 5s (see DaemonRunloop), so widen the engine's
         // sample/derivative windows to keep ≥3 samples for the median and ≥2

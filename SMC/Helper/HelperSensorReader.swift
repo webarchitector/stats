@@ -36,11 +36,17 @@ public final class HelperSensorReader {
     /// loop's writes — `SMC.shared` is a single connection with no internal
     /// locking. See `SMCFanWriter.accessQueue`.
     private let accessQueue: DispatchQueue
+    /// Reports per-fan user takeover into the snapshot so the engine yields a
+    /// fan the user grabbed via Manual/Off/Max. Optional so a reader can be
+    /// built without one (e.g. tests).
+    private let takeover: TakeoverStore?
 
     public init(smc: SMC = .shared,
-                accessQueue: DispatchQueue = DispatchQueue(label: "eu.exelban.Stats.SMC.Helper.smcAccess")) {
+                accessQueue: DispatchQueue = DispatchQueue(label: "eu.exelban.Stats.SMC.Helper.smcAccess"),
+                takeover: TakeoverStore? = nil) {
         self.smc = smc
         self.accessQueue = accessQueue
+        self.takeover = takeover
     }
 
     /// Build a snapshot of fans + driver-sensor temperatures for the
@@ -74,19 +80,17 @@ public final class HelperSensorReader {
                 smcMode = nil
             }
 
-            // Phase 2: helper doesn't yet track user takeover. The app
-            // signals takeover by setting Fan.customMode = .forced via
-            // the popup callback; the daemon will get an explicit XPC
-            // setTakeover(id:on:) method in Phase 5. Until then we always
-            // report `false`, which is safe — the engine will just keep
-            // managing every fan in the profile.
+            // User takeover (Manual/Off/Max via the popup → setOverride) is
+            // tracked in the daemon's takeover store. Feed it into the snapshot
+            // so the engine yields this fan instead of overwriting the user's
+            // manual RPM with the curve.
             out.append(FanSnapshot(
                 id: i,
                 minSpeed: minSpeed,
                 maxSpeed: maxSpeed,
                 value: value,
                 smcMode: smcMode,
-                userTookOver: false
+                userTookOver: self.takeover?.userTookOver(fan: i) ?? false
             ))
         }
         return out
@@ -125,6 +129,11 @@ public final class HelperSensorReader {
         var cpuValues: [Double] = []
         var gpuValues: [Double] = []
         var socValues: [Double] = []
+        // SoC die sensors. M1/M2 expose per-cluster "pACC/eACC/GPU/SOC MTR
+        // Temp"; M3/M4-era Macs (e.g. Mac17,2) instead name them "PMU tdie*" /
+        // "PMU2 tdie*". Collect both so the curve resolves a temperature on
+        // either generation rather than relinquishing.
+        var dieValues: [Double] = []
         for (k, v) in hid {
             guard v >= 0, v < 300 else { continue }
             if k.hasPrefix("pACC MTR Temp") || k.hasPrefix("eACC MTR Temp") {
@@ -133,8 +142,16 @@ public final class HelperSensorReader {
                 gpuValues.append(v)
             } else if k.hasPrefix("SOC MTR Temp") {
                 socValues.append(v)
+            } else if k.contains("tdie") {
+                dieValues.append(v)
             }
         }
+        // Hardware without the MTR-named clusters: drive the CPU/GPU/SOC
+        // aggregates off the SoC die sensors so the default "Hottest CPU" /
+        // "Hottest GPU" profile drivers still resolve.
+        if cpuValues.isEmpty { cpuValues = dieValues }
+        if gpuValues.isEmpty { gpuValues = dieValues }
+        if socValues.isEmpty { socValues = dieValues }
 
         // Aggregate synthesis — mirrors the "Hottest …" / "Average …"
         // logic in Modules/Sensors/readers.swift.
@@ -164,6 +181,22 @@ public final class HelperSensorReader {
             guard v >= 0, v < 300 else { continue }
             sensors.append(HelperSensor(key: k, name: k, value: v, type: .temperature))
             remaining.remove(k)
+        }
+
+        // Last-resort safety net: a requested driver still unresolved (an
+        // unrecognized naming scheme). Drive it off the hottest plausible
+        // on-die thermal sensor so the curve never goes blind and relinquishes.
+        // Excludes battery / storage and out-of-range readings.
+        if !remaining.isEmpty {
+            let dieMax = hid
+                .filter { 20 < $0.value && $0.value < 130
+                    && !$0.key.lowercased().contains("battery")
+                    && !$0.key.contains("NAND")
+                    && !$0.key.lowercased().contains("gas gauge") }
+                .values.max()
+            if let dieMax = dieMax {
+                for key in Array(remaining) { emit(key, dieMax) }
+            }
         }
         #endif
 

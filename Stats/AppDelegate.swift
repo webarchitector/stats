@@ -156,16 +156,22 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     ///
     /// The prompt is dismissable; user choice to skip falls through to the
     /// in-app `FanCurveController` (helper file might still be a working v1).
-    private func probeHelperAndMaybePromptMigration() {
-        let helperInstalled = SMCHelper.shared.isInstalled
+    private func probeHelperAndMaybePromptMigration(attempt: Int = 0) {
+        // A version < 2 may be transient: `checkForUpdate()` runs just before
+        // this and can be mid-reinstall (version bump), during which the
+        // daemon's XPC is briefly unavailable and protocolVersion returns 0.
+        // Retry before concluding "missing/legacy" so a normal reinstall
+        // doesn't wrongly drop daemonMode and pop a spurious migration prompt.
+        let maxAttempts = 5
         var settled = false
-        let settle: (Int) -> Void = { version in
+        let settle: (Int) -> Void = { [weak self] version in
             DispatchQueue.main.async {
+                guard let self = self else { return }
                 if settled { return }
                 settled = true
-                let daemonMode = version >= 2
-                Store.shared.set(key: "fanctl_daemonMode", value: daemonMode)
-                if daemonMode {
+
+                if version >= 2 {
+                    Store.shared.set(key: "fanctl_daemonMode", value: true)
                     info("Helper is daemon-aware (v\(version)) - in-app controller will be disabled on next launch")
                     // If the daemon has no active profile (fresh install /
                     // post `make uninstall-helper`), push the app's cached
@@ -177,17 +183,29 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
                     }
                     return
                 }
+
+                // version 0/1 — retry in case the daemon is mid-reinstall.
+                if attempt + 1 < maxAttempts {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        self.probeHelperAndMaybePromptMigration(attempt: attempt + 1)
+                    }
+                    return
+                }
+
+                // Sustained across retries — genuinely missing or legacy.
+                let helperInstalled = SMCHelper.shared.isInstalled
+                Store.shared.set(key: "fanctl_daemonMode", value: false)
                 if version == 0 && !helperInstalled {
                     info("Helper not installed - prompting user to install")
                 } else {
-                    info("Helper is v\(version) (legacy) - prompting user to reinstall")
+                    info("Helper is v\(version) (legacy/unreachable) - prompting user to reinstall")
                 }
                 self.promptForHelperReinstall(currentVersion: version, helperInstalled: helperInstalled)
             }
         }
         SMCHelper.shared.protocolVersion { version in settle(version) }
-        // 3 s safety net — if XPC blocks (file present, daemon wedged) we
-        // still want to give the user feedback rather than spin forever.
+        // Per-attempt safety net — if XPC blocks (file present, daemon wedged)
+        // we still advance rather than spin forever.
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
             settle(0)
         }

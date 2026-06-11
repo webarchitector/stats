@@ -488,6 +488,7 @@ internal class FanView: NSStackView {
     private var helperView: NSView? = nil
     private var controlView: NSView? = nil
     private var buttonsView: NSView? = nil
+    private var uninstallView: NSView? = nil
     
     private var valueField: NSTextField? = nil
     private var sliderValueField: NSTextField? = nil
@@ -537,6 +538,7 @@ internal class FanView: NSStackView {
         self.helperView = self.noHelper()
         self.controlView = self.control()
         self.buttonsView = self.mode()
+        self.uninstallView = self.uninstallButton()
         
         self.orientation = .vertical
         self.alignment = .centerX
@@ -638,10 +640,33 @@ internal class FanView: NSStackView {
         
         container.addArrangedSubview(button)
         view.addSubview(container)
-        
+
         return view
     }
-    
+
+    /// Discreet "Uninstall fan helper" row, shown when the daemon IS installed
+    /// (swaps with `helperView`/Install when it is not). Smaller + muted so a
+    /// destructive action doesn't read as a primary CTA.
+    private func uninstallButton() -> NSView {
+        let view: NSView = NSView(frame: NSRect(x: 0, y: 0, width: self.frame.width, height: 20))
+        view.heightAnchor.constraint(equalToConstant: view.bounds.height).isActive = true
+
+        let button: NSButton = NSButton(title: "", target: self, action: #selector(self.uninstallHelper))
+        button.isBordered = false
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.attributedTitle = NSAttributedString(
+            string: localizedString("Uninstall fan helper"),
+            attributes: [.font: NSFont.systemFont(ofSize: 10),
+                         .foregroundColor: NSColor.secondaryLabelColor])
+        view.addSubview(button)
+        NSLayoutConstraint.activate([
+            button.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            button.centerYAnchor.constraint(equalTo: view.centerYAnchor)
+        ])
+
+        return view
+    }
+
     @objc private func reloadCurveProfilePopupNotification() {
         self.modeButtons?.reloadProfilePopup()
     }
@@ -983,6 +1008,24 @@ internal class FanView: NSStackView {
             NotificationCenter.default.post(name: .fanHelperState, object: nil, userInfo: ["state": status])
         }
     }
+
+    @objc private func uninstallHelper(_ sender: NSButton) {
+        let alert = NSAlert()
+        alert.messageText = localizedString("Uninstall fan control daemon?")
+        alert.informativeText = localizedString("Fans will return to Apple's automatic control. You can reinstall the helper later.")
+        alert.addButton(withTitle: localizedString("Uninstall"))
+        alert.addButton(withTitle: localizedString("Cancel"))
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+
+        // Resets fans to automatic, then the daemon removes its own plist +
+        // binary (runs as root — no password). No completion handler, and the
+        // helper file is deleted asynchronously after the daemon pid dies, so
+        // swap the UI optimistically via .fanHelperState rather than re-reading
+        // isInstalled (which would still report true for a moment).
+        SMCHelper.shared.uninstall()
+        Store.shared.set(key: "fanctl_daemonMode", value: false)
+        NotificationCenter.default.post(name: .fanHelperState, object: nil, userInfo: ["state": false])
+    }
     
     private func setupControls(_ isInstalled: Bool? = nil) {
         let helperState = isInstalled ?? SMCHelper.shared.isInstalled
@@ -997,9 +1040,13 @@ internal class FanView: NSStackView {
             if self.fan.mode == .forced, let v = self.controlView {
                 self.addArrangedSubview(v)
             }
+            if let v = self.uninstallView {
+                self.addArrangedSubview(v)
+            }
         } else {
             self.buttonsView?.removeFromSuperview()
             self.controlView?.removeFromSuperview()
+            self.uninstallView?.removeFromSuperview()
             if let v = self.helperView {
                 self.addArrangedSubview(v)
             }

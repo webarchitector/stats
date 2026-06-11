@@ -177,8 +177,15 @@ internal class SensorsReader: Reader<Sensors_List> {
             
             cpuSensors += self.list.sensors.filter({ $0.key.hasPrefix("pACC MTR Temp") || $0.key.hasPrefix("eACC MTR Temp") }).map{ $0.value }
             gpuSensors += self.list.sensors.filter({ $0.key.hasPrefix("GPU MTR Temp") }).map{ $0.value }
-            
-            let socSensors = self.list.sensors.filter({ $0.key.hasPrefix("SOC MTR Temp") }).map{ $0.value }
+
+            var socSensors = self.list.sensors.filter({ $0.key.hasPrefix("SOC MTR Temp") }).map{ $0.value }
+            // M3/M4-era Macs name die sensors "PMU tdie*" rather than the
+            // per-cluster "MTR Temp" sensors — fall back to them so the
+            // CPU/GPU/SOC aggregates still update. Mirrors HelperSensorReader.
+            let dieSensors = self.list.sensors.filter({ $0.key.contains("tdie") }).map{ $0.value }
+            if cpuSensors.isEmpty { cpuSensors += dieSensors }
+            if gpuSensors.isEmpty { gpuSensors += dieSensors }
+            if socSensors.isEmpty { socSensors = dieSensors }
             if !socSensors.isEmpty {
                 if let idx = self.list.sensors.firstIndex(where: { $0.key == "Average SOC" }) {
                     self.list.sensors[idx].value = socSensors.reduce(0, +) / Double(socSensors.count)
@@ -279,6 +286,11 @@ internal class SensorsReader: Reader<Sensors_List> {
         if self.HIDState {
             cpuSensors += sensors.filter({ $0.key.hasPrefix("pACC MTR Temp") || $0.key.hasPrefix("eACC MTR Temp") }).map{ $0.value }
             gpuSensors += sensors.filter({ $0.key.hasPrefix("GPU MTR Temp") }).map{ $0.value }
+            // Newer Apple Silicon names die sensors "PMU tdie*" — fall back so
+            // the Hottest/Average CPU/GPU aggregates still get created.
+            let dieSensors = sensors.filter({ $0.key.contains("tdie") }).map{ $0.value }
+            if cpuSensors.isEmpty { cpuSensors += dieSensors }
+            if gpuSensors.isEmpty { gpuSensors += dieSensors }
         }
         #endif
         
@@ -474,7 +486,11 @@ extension SensorsReader {
             }
         }
         
-        let socSensors = list.filter({ $0.key.hasPrefix("SOC MTR Temp") }).map{ $0.value }
+        var socSensors = list.filter({ $0.key.hasPrefix("SOC MTR Temp") }).map{ $0.value }
+        if socSensors.isEmpty {
+            // Newer Apple Silicon: no "SOC MTR Temp"; use the "PMU tdie*" die sensors.
+            socSensors = list.filter({ $0.key.contains("tdie") }).map{ $0.value }
+        }
         if !socSensors.isEmpty {
             let value = socSensors.reduce(0, +) / Double(socSensors.count)
             list.append(Sensor(key: "Average SOC", name: "Average SOC", value: value, group: .hid, type: .temperature, platforms: Platform.all))
